@@ -1,0 +1,21 @@
+appId: com.dueledger.app
+productName: DueLedger
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+# better-sqlite3는 네이티브(.node)라 asar 안에서 로드 불가 → 언팩 (P0 #5 데이터 게이트가 실제 동작하려면 필수)
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**"
+# 단일 사용자 포터블 .exe (설치 마법사 없음, 더블클릭). 미서명 → 첫 실행 시 윈도우 경고 1회.
+win:
+  target:
+    - portable
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
+# 로컬 검증용(맥) — 서명/공증 없이 언팩만
+mac:
+  target:
+    - dir

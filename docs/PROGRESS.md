@@ -4,7 +4,7 @@
 
 ## 현재 상태 (2026-06-16)
 **계층**: domain(순수 로직) + repository(데이터 게이트, CRUD + 테이블 뷰 조회) 완료. UI·Electron 셸 미착수.
-**테스트**: 65 passing (blackbox + whitebox), `tsc --noEmit` clean.
+**테스트**: 68 passing (blackbox + whitebox), `tsc --noEmit` clean.
 **CI**: GitHub Actions(`.github/workflows/ci.yml`) — Node 22에서 typecheck + test. 브랜치 `feat/domain-repository-foundation`.
 
 ## 완료
@@ -32,7 +32,8 @@
 - **명세서 편집 = 품목 삭제 후 재삽입**: 1인 앱이라 단순·정확 우선. diff 머지 안 함.
 - **better-sqlite3 Node 26 프리빌드 동작 확인**(무빌드). CI는 Node 22.
 
+- `seed.ts` — 초기 카테고리(식자재/포장재/소모품/위생용품/기타) 시드. 빈 DB일 때만, 멱등. openDatabase엔 비엮음(앱 init이 호출).
+
 ## 다음
-1. **카테고리 시드** — 식자재/포장재/소모품/위생용품/기타 초기 투입(시드 함수, 빈 DB일 때만).
-2. **Electron + React UI 스캐폴딩** — repository만 호출. 수기 입력 폼 + 테이블 뷰.
-3. (선택·나중) 엑셀 임포터 · taxRate 편집 파라미터 스토어 · 거래처 결제조건 변경 시 dueDate 재계산.
+1. **Electron + React UI 스캐폴딩** — 메인 프로세스가 DB/repository 소유 + IPC 노출, preload contextBridge, React 렌더러는 IPC만 호출(SQLite 직접접근 ❌, P0 #5). 수기 입력 폼 + 테이블 뷰. ⚠️ Electron 실행 검증은 헤드리스 CI 불가 → 유저 머신 필요.
+2. (선택·나중) 엑셀 임포터 · taxRate 편집 파라미터 스토어 · 거래처 결제조건 변경 시 dueDate 재계산.

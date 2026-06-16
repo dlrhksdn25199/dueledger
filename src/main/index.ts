@@ -7,6 +7,11 @@ import { registerIpcHandlers } from './ipc';
 
 let db: DB | null = null;
 
+// CDP UI 테스트 훅 — 환경변수가 있을 때만 렌더러 원격 디버깅 포트를 연다(평소엔 비활성).
+if (process.env.DUELEDGER_REMOTE_DEBUG) {
+  app.commandLine.appendSwitch('remote-debugging-port', '9222');
+}
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,

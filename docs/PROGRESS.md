@@ -3,9 +3,18 @@
 > 진행 상황 단일 기록. 매 작업마다 갱신. (정책·결정은 `CLAUDE.md`, 원칙은 `coding-principles.md`)
 
 ## 현재 상태 (2026-06-16)
-**계층**: domain + repository + **Electron/React UI 스캐폴딩** 완료(셸+IPC+3탭 화면). 패키징(.exe)·실기기 클릭검증 미완.
-**테스트**: 68 passing (blackbox + whitebox), `tsc --noEmit` clean, `electron-vite build` 성공(main+preload+renderer 번들).
+**계층**: domain + repository + **Electron/React UI** 완료(셸+IPC+3탭 화면). 패키징(.exe) 미완.
+**테스트**: 68 passing (blackbox + whitebox), `tsc --noEmit` clean, `electron-vite build` 성공.
+**맥 실기기 검증**: CDP 클릭/입력 스모크 **14/14 통과** (`scripts/cdp-smoke.mjs`) — 시드·거래처·명세서 입력·금액(12,345→부가세 1,235→합계 13,580)·결제일(net-30→2026-07-16)·정렬·사용중 삭제 차단까지 실제 동작 확인.
 **CI**: GitHub Actions — Node 22에서 typecheck + test + build. 브랜치 `feat/domain-repository-foundation`.
+
+### ⚙️ 로컬 실행/검증 (better-sqlite3 ABI 주의)
+better-sqlite3는 네이티브 모듈이라 **Node용 빌드와 Electron용 빌드의 ABI가 다르다.** 한 번에 한쪽만 유효.
+- **테스트(Node)**: `npm test` (설치 직후 기본 = Node 프리빌드). 깨졌으면 `npm run rebuild:node`.
+- **앱 실행(Electron)**: `npm run rebuild:electron` → `npm run dev`. (이러면 vitest는 다시 깨짐 → 테스트 전 `rebuild:node`.)
+- CI는 `npm ci`(Node 빌드) + test + build만 — 앱을 실행하지 않으므로 영향 없음.
+- **CDP 스모크**: `npm run rebuild:electron && DUELEDGER_REMOTE_DEBUG=1 npm run dev` (별 셸) → `node scripts/cdp-smoke.mjs`. 헤드리스 CI 불가, 맥/윈도우 데스크톱 세션에서.
+- 메인에 `DUELEDGER_REMOTE_DEBUG` 환경변수가 있을 때만 렌더러 원격 디버깅 포트(9222)를 연다(평소 비활성).
 
 ## 완료
 ### domain/ (DB 없음, 순수 함수)
@@ -41,6 +50,5 @@
 - DB 경로 = `userData/dueledger.db`(%APPDATA%), 첫 실행 시 카테고리 시드.
 
 ## 다음
-1. **실기기 클릭 검증** — 윈도우/맥에서 `npm run dev`로 입력·조회·삭제 흐름 확인(헤드리스 CI 불가).
-2. **패키징** — 포터블 .exe(electron-builder 등). 미서명 → 첫 실행 경고 인계 메모.
+1. **패키징** — 포터블 .exe(electron-builder 등, 네이티브 모듈 자동 리빌드). 미서명 → 첫 실행 경고 인계 메모.
 3. (선택·나중) 엑셀 임포터 · taxRate 편집 파라미터 · 거래처 결제조건 변경 시 dueDate 재계산 · CategoryInUseError 건수의 IPC 구조화 전달.

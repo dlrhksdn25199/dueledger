@@ -7,6 +7,7 @@
 **테스트**: 68 passing (blackbox + whitebox), `tsc --noEmit` clean, `electron-vite build` 성공.
 **맥 실기기 검증**: CDP 스모크(`scripts/cdp-smoke.mjs`) **dev 14/14 + 패키지된 앱 12/12 통과** — 시드·거래처·명세서 입력·금액(12,345→부가세 1,235→합계 13,580)·결제일(net-30→2026-07-16)·정렬·사용중 삭제 차단. 패키지 앱 검증은 프로덕션 경로(loadFile + asar 언팩된 better-sqlite3 + userData DB)까지 통과 → .exe도 동일 동작 근거.
 **패키징**: `electron-builder.yml` — win=포터블 .exe(미서명), mac=dir(로컬검증). better-sqlite3 asar 언팩. CI(windows-latest)가 .exe 아티팩트 생성.
+**문서**: `README.md` — 엔드유저용 설치·사용 설명서(한국어). .exe와 함께 전달.
 **CI**: GitHub Actions — ubuntu(typecheck+test+build) + windows(포터블 .exe, `needs: test`). 브랜치 `feat/domain-repository-foundation`.
 
 ### ⚙️ 로컬 실행/검증 (better-sqlite3 ABI 주의)

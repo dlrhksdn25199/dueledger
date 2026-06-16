@@ -3,9 +3,9 @@
 > 진행 상황 단일 기록. 매 작업마다 갱신. (정책·결정은 `CLAUDE.md`, 원칙은 `coding-principles.md`)
 
 ## 현재 상태 (2026-06-16)
-**계층**: domain(순수 로직) + repository(데이터 게이트, CRUD + 테이블 뷰 조회) 완료. UI·Electron 셸 미착수.
-**테스트**: 68 passing (blackbox + whitebox), `tsc --noEmit` clean.
-**CI**: GitHub Actions(`.github/workflows/ci.yml`) — Node 22에서 typecheck + test. 브랜치 `feat/domain-repository-foundation`.
+**계층**: domain + repository + **Electron/React UI 스캐폴딩** 완료(셸+IPC+3탭 화면). 패키징(.exe)·실기기 클릭검증 미완.
+**테스트**: 68 passing (blackbox + whitebox), `tsc --noEmit` clean, `electron-vite build` 성공(main+preload+renderer 번들).
+**CI**: GitHub Actions — Node 22에서 typecheck + test + build. 브랜치 `feat/domain-repository-foundation`.
 
 ## 완료
 ### domain/ (DB 없음, 순수 함수)
@@ -34,6 +34,13 @@
 
 - `seed.ts` — 초기 카테고리(식자재/포장재/소모품/위생용품/기타) 시드. 빈 DB일 때만, 멱등. openDatabase엔 비엮음(앱 init이 호출).
 
+### UI (Electron + React, electron-vite)
+- `electron.vite.config.ts` · `src/main/{index,ipc}.ts` · `src/preload/index.ts` · `src/shared/api.ts`(IPC 계약) · `src/renderer/**`
+- 메인이 DB/repository 소유, IPC로 노출 → preload contextBridge `window.api` → 렌더러는 IPC만 호출(SQLite 직접접근 ❌, P0 #5).
+- 3탭: **명세서**(테이블 뷰 정렬·필터·검색 + 다품목 입력 폼, vat/total 라이브 미리보기는 domain 함수 재사용) · **거래처** CRUD · **카테고리** CRUD(사용 중 삭제 시 건수 안내).
+- DB 경로 = `userData/dueledger.db`(%APPDATA%), 첫 실행 시 카테고리 시드.
+
 ## 다음
-1. **Electron + React UI 스캐폴딩** — 메인 프로세스가 DB/repository 소유 + IPC 노출, preload contextBridge, React 렌더러는 IPC만 호출(SQLite 직접접근 ❌, P0 #5). 수기 입력 폼 + 테이블 뷰. ⚠️ Electron 실행 검증은 헤드리스 CI 불가 → 유저 머신 필요.
-2. (선택·나중) 엑셀 임포터 · taxRate 편집 파라미터 스토어 · 거래처 결제조건 변경 시 dueDate 재계산.
+1. **실기기 클릭 검증** — 윈도우/맥에서 `npm run dev`로 입력·조회·삭제 흐름 확인(헤드리스 CI 불가).
+2. **패키징** — 포터블 .exe(electron-builder 등). 미서명 → 첫 실행 경고 인계 메모.
+3. (선택·나중) 엑셀 임포터 · taxRate 편집 파라미터 · 거래처 결제조건 변경 시 dueDate 재계산 · CategoryInUseError 건수의 IPC 구조화 전달.

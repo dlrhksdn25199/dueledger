@@ -1,0 +1,30 @@
+// preload — contextBridge로 안전한 api 표면만 렌더러에 노출. 렌더러는 ipcRenderer/Node 직접 접근 불가.
+import { contextBridge, ipcRenderer } from 'electron';
+import type { Api } from '../shared/api';
+
+const api: Api = {
+  vendor: {
+    list: () => ipcRenderer.invoke('vendor:list'),
+    create: (input) => ipcRenderer.invoke('vendor:create', input),
+    update: (id, input) => ipcRenderer.invoke('vendor:update', id, input),
+    remove: (id) => ipcRenderer.invoke('vendor:remove', id),
+  },
+  category: {
+    list: () => ipcRenderer.invoke('category:list'),
+    create: (name) => ipcRenderer.invoke('category:create', name),
+    rename: (id, name) => ipcRenderer.invoke('category:rename', id, name),
+    countItemsUsing: (id) => ipcRenderer.invoke('category:countItemsUsing', id),
+    remove: (id) => ipcRenderer.invoke('category:remove', id),
+  },
+  transaction: {
+    get: (id) => ipcRenderer.invoke('transaction:get', id),
+    create: (input) => ipcRenderer.invoke('transaction:create', input),
+    update: (id, input) => ipcRenderer.invoke('transaction:update', id, input),
+    remove: (id) => ipcRenderer.invoke('transaction:remove', id),
+  },
+  ledger: {
+    list: (query) => ipcRenderer.invoke('ledger:list', query),
+  },
+};
+
+contextBridge.exposeInMainWorld('api', api);

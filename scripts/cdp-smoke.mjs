@@ -130,6 +130,36 @@ const alertMsg = await evalJS(`window.__lastAlert`);
 check('사용 중 카테고리 삭제 차단 알림', !!alertMsg && alertMsg.includes('사용 중'), alertMsg || '(no alert)');
 await shot('06-category-guard');
 
+// 6) 홈 대시보드 (A) — 카드 + 상태 배지
+await evalJS(`__t.clickText('.tab','홈')`);
+await sleep(400);
+const cards = await evalJS(`
+  Object.fromEntries(Array.from(document.querySelectorAll('.card')).map(c=>[
+    c.querySelector('.card-label').textContent.trim(),
+    { count: c.querySelector('.card-count').textContent.trim(), amount: c.querySelector('.card-amount').textContent.trim() }
+  ]))
+`);
+check('홈 예정 카드 1건', cards['예정']?.count === '1건', JSON.stringify(cards['예정']));
+check('홈 총 미지급 13,580원', (cards['총 미지급']?.amount || '').includes('13,580'), cards['총 미지급']?.amount);
+const homeBadge = await evalJS(`document.querySelector('.badge')?.textContent.trim() || ''`);
+check('홈 상태 배지(미지급)', homeBadge === '미지급' || homeBadge === '', homeBadge); // attention 비어있을 수도
+await shot('07-home');
+
+// 7) 배지 색상 (B) — 명세서 표의 결제상태 배지
+await evalJS(`__t.clickText('.tab','명세서')`);
+await sleep(400);
+const ledgerBadge = await evalJS(`document.querySelector('table.grid.ledger .badge.unpaid')?.textContent.trim() || ''`);
+check('명세서 미지급 배지', ledgerBadge === '미지급', ledgerBadge);
+
+// 8) 캘린더 (E) — 7월로 이동, 결제일(7/16) 칸에 금액 표시
+await evalJS(`__t.clickText('.tab','달력')`);
+await sleep(400);
+await evalJS(`__t.clickText('.cal-header button','다음')`); // 6월 → 7월
+await sleep(300);
+const calAmounts = await evalJS(`Array.from(document.querySelectorAll('.cal-amount')).map(e=>e.textContent.trim())`);
+check('캘린더 7월에 결제(13,580) 표시', calAmounts.includes('13,580'), calAmounts.join(','));
+await shot('08-calendar');
+
 console.log(`\n=== RESULT: ${pass.length} passed, ${fail.length} failed ===`);
 if (fail.length) console.log('FAILED: ' + fail.join(' | '));
 ws.close();

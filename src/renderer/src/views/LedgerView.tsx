@@ -8,7 +8,9 @@ import type {
   Transaction,
   Vendor,
 } from '../../../shared/api';
-import { won, nullable } from '../format';
+import { won, nullable, todayISO } from '../format';
+import { isOverdue } from '../../../domain/paymentSchedule';
+import { StatusBadge } from '../status';
 import { TransactionForm } from './TransactionForm';
 
 const PAYMENT_STATUSES: PaymentStatus[] = ['미지급', '지급예정', '지급완료'];
@@ -40,6 +42,7 @@ export function LedgerView() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const today = todayISO();
 
   const reload = useCallback(async () => {
     const query: LedgerQuery = { sort };
@@ -147,8 +150,12 @@ export function LedgerView() {
               <td>{nullable(r.categoryName)}</td>
               <td className="num">{won(r.supplyAmount)}</td>
               <td className="num">{won(r.total)}</td>
-              <td>{r.paymentStatus}</td>
-              <td>{nullable(r.dueDate)}</td>
+              <td>
+                <StatusBadge status={r.paymentStatus} />
+              </td>
+              <td className={isOverdue(r.dueDate, r.paymentStatus, today) ? 'overdue' : ''}>
+                {nullable(r.dueDate)}
+              </td>
               <td>{r.itemName}</td>
               <td>{nullable(r.spec)}</td>
               <td className="num">{r.quantity ?? ''}</td>

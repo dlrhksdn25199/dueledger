@@ -165,3 +165,33 @@ describe('transactionRepository — whitebox 파생값', () => {
     expect(i.supplyAmount).toBe(33000);
   });
 });
+
+describe('transactionRepository.listSummaries', () => {
+  it('명세서 단위 합계·결제일 정렬(미정은 뒤)', () => {
+    // net-30 거래처: 발행일+30일이 결제일
+    repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16', // due 2026-07-16
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item({ supplyAmount: 10000, taxType: '면세' }), item({ supplyAmount: 5000, taxType: '면세' })],
+    });
+    repo.create({
+      vendorId: vendorNoTerms, // dueDate null
+      issueDate: '2026-06-01',
+      paymentStatus: '지급완료',
+      memo: null,
+      items: [item({ supplyAmount: 7000, taxType: '면세' })],
+    });
+    const sums = repo.listSummaries();
+    expect(sums).toHaveLength(2);
+    // 결제일 있는 것 먼저
+    expect(sums[0].dueDate).toBe('2026-07-16');
+    expect(sums[0].total).toBe(15000); // 두 품목 합계
+    expect(sums[0].itemCount).toBe(2);
+    expect(sums[0].vendorName).toBe('가나상회');
+    // 미정(null)은 뒤
+    expect(sums[1].dueDate).toBeNull();
+    expect(sums[1].paymentStatus).toBe('지급완료');
+  });
+});

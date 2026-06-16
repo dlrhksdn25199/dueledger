@@ -166,6 +166,72 @@ describe('transactionRepository — whitebox 파생값', () => {
   });
 });
 
+describe('transactionRepository — 결제일 수동 지정', () => {
+  it('수동 지정이면 자동계산 대신 입력값 저장', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms, // net-30이면 자동 2026-07-16이지만 수동 우선
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+      dueDateOverridden: true,
+      dueDate: '2026-12-25',
+    });
+    const read = repo.getById(t.id)!;
+    expect(read.dueDate).toBe('2026-12-25');
+    expect(read.dueDateOverridden).toBe(true);
+  });
+
+  it('기본(미지정)은 자동계산 + overridden=false', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+    });
+    const read = repo.getById(t.id)!;
+    expect(read.dueDate).toBe('2026-07-16');
+    expect(read.dueDateOverridden).toBe(false);
+  });
+
+  it('update로 수동→자동 전환 시 재계산', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+      dueDateOverridden: true,
+      dueDate: '2099-01-01',
+    });
+    repo.update(t.id, {
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+      // dueDateOverridden 생략 → 자동
+    });
+    const read = repo.getById(t.id)!;
+    expect(read.dueDate).toBe('2026-07-16');
+    expect(read.dueDateOverridden).toBe(false);
+  });
+});
+
+describe('transactionRepository.listRecent', () => {
+  it('최근 생성 순(newest first) + limit', () => {
+    const mk = (memo: string) =>
+      repo.create({ vendorId: vendorWithTerms, issueDate: '2026-06-16', paymentStatus: '미지급', memo, items: [item()] });
+    mk('A');
+    mk('B');
+    const c = mk('C');
+    const recent = repo.listRecent(2);
+    expect(recent).toHaveLength(2);
+    expect(recent[0].id).toBe(c.id); // 가장 최근
+  });
+});
+
 describe('transactionRepository.listSummaries', () => {
   it('명세서 단위 합계·결제일 정렬(미정은 뒤)', () => {
     // net-30 거래처: 발행일+30일이 결제일

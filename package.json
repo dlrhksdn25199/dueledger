@@ -11,13 +11,12 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:electron": "electron-builder install-app-deps",
     "rebuild:node": "npm rebuild better-sqlite3",
     "package:win": "electron-vite build && electron-builder --win portable",
     "package:mac": "electron-vite build && electron-builder --mac dir"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.9.3",
     "@types/react": "^19.2.17",

@@ -37,6 +37,7 @@ export interface Api {
     update(id: number, input: TransactionInput): Promise<Transaction>;
     remove(id: number): Promise<void>;
     listSummaries(): Promise<TransactionSummary[]>;
+    listRecent(limit: number): Promise<TransactionSummary[]>;
   };
   ledger: {
     list(query?: LedgerQuery): Promise<LedgerRow[]>;

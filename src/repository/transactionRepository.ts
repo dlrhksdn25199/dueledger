@@ -29,13 +29,17 @@ export interface TransactionInput {
   paymentStatus: PaymentStatus;
   memo: string | null;
   items: TransactionItemInput[];
+  // 결제일 수동 지정(선택). true면 dueDate를 자동 계산하지 않고 아래 값을 그대로 저장.
+  dueDateOverridden?: boolean;
+  dueDate?: string | null;
 }
 
 export interface Transaction {
   id: number;
   vendorId: number;
   issueDate: string;
-  dueDate: string | null; // 거래처 결제조건 적용값 (조건 없으면 null)
+  dueDate: string | null; // 거래처 결제조건 적용값 (조건 없으면 null). 수동 지정 시 그 값.
+  dueDateOverridden: boolean; // true면 사용자가 직접 지정 (자동 재계산 안 함)
   paymentStatus: PaymentStatus;
   memo: string | null;
   items: TransactionItem[];
@@ -58,6 +62,8 @@ interface ItemRow {
 interface HeaderRow {
   id: number;
   vendor_id: number;
+  due_date_overridden: number;
+  updated_at: string | null;
   issue_date: string;
   due_date: string | null;
   payment_status: PaymentStatus;
@@ -98,6 +104,7 @@ export interface TransactionRepository {
   update(id: number, input: TransactionInput): Transaction;
   remove(id: number): void;
   listSummaries(): TransactionSummary[];
+  listRecent(limit: number): TransactionSummary[];
 }
 
 export function createTransactionRepository(db: DB): TransactionRepository {
@@ -116,9 +123,15 @@ export function createTransactionRepository(db: DB): TransactionRepository {
     return terms ? computeDueDate(issueDate, terms) : null;
   }
 
+  // 수동 지정이면 입력값 그대로, 아니면 자동 계산.
+  function resolveDue(input: TransactionInput): { dueDate: string | null; overridden: number } {
+    if (input.dueDateOverridden) return { dueDate: input.dueDate ?? null, overridden: 1 };
+    return { dueDate: computeDue(input.vendorId, input.issueDate), overridden: 0 };
+  }
+
   const insertHeader = db.prepare(
-    `INSERT INTO transaction_header (vendor_id, issue_date, due_date, payment_status, memo)
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO transaction_header (vendor_id, issue_date, due_date, due_date_overridden, payment_status, memo, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
   const insertItem = db.prepare(
     `INSERT INTO transaction_item
@@ -147,11 +160,19 @@ export function createTransactionRepository(db: DB): TransactionRepository {
 
   const repo: TransactionRepository = {
     create(input) {
-      const dueDate = computeDue(input.vendorId, input.issueDate);
+      const { dueDate, overridden } = resolveDue(input);
+      const now = new Date().toISOString();
       const tx = db.transaction(() => {
         const headerId = Number(
-          insertHeader.run(input.vendorId, input.issueDate, dueDate, input.paymentStatus, input.memo)
-            .lastInsertRowid,
+          insertHeader.run(
+            input.vendorId,
+            input.issueDate,
+            dueDate,
+            overridden,
+            input.paymentStatus,
+            input.memo,
+            now,
+          ).lastInsertRowid,
         );
         insertItems(headerId, input.items);
         return headerId;
@@ -173,6 +194,7 @@ export function createTransactionRepository(db: DB): TransactionRepository {
         vendorId: header.vendor_id,
         issueDate: header.issue_date,
         dueDate: header.due_date,
+        dueDateOverridden: header.due_date_overridden === 1,
         paymentStatus: header.payment_status,
         memo: header.memo,
         items,
@@ -181,15 +203,17 @@ export function createTransactionRepository(db: DB): TransactionRepository {
 
     // 명세서 편집 = 헤더 갱신 + 품목 전량 교체(삭제 후 재삽입). 1인 앱이라 단순·정확 우선.
     update(id, input) {
-      const dueDate = computeDue(input.vendorId, input.issueDate);
+      const { dueDate, overridden } = resolveDue(input);
+      const now = new Date().toISOString();
       const tx = db.transaction(() => {
         const info = db
           .prepare(
             `UPDATE transaction_header
-               SET vendor_id = ?, issue_date = ?, due_date = ?, payment_status = ?, memo = ?
+               SET vendor_id = ?, issue_date = ?, due_date = ?, due_date_overridden = ?,
+                   payment_status = ?, memo = ?, updated_at = ?
              WHERE id = ?`,
           )
-          .run(input.vendorId, input.issueDate, dueDate, input.paymentStatus, input.memo, id);
+          .run(input.vendorId, input.issueDate, dueDate, overridden, input.paymentStatus, input.memo, now, id);
         if (info.changes === 0) throw new Error(`Transaction not found: ${id}`);
         db.prepare(`DELETE FROM transaction_item WHERE transaction_id = ?`).run(id);
         insertItems(id, input.items);
@@ -226,6 +250,28 @@ export function createTransactionRepository(db: DB): TransactionRepository {
         )
         .all() as TransactionSummary[];
       return rows;
+    },
+
+    // 최근 생성/수정된 명세서 (홈 "최근 건드린 것"). updated_at 내림차순, 동률·NULL은 id 내림차순.
+    listRecent(limit) {
+      return db
+        .prepare(
+          `SELECT th.id              AS id,
+                  th.vendor_id        AS vendorId,
+                  v.name              AS vendorName,
+                  th.issue_date       AS issueDate,
+                  th.due_date         AS dueDate,
+                  th.payment_status   AS paymentStatus,
+                  COALESCE(SUM(ti.total), 0) AS total,
+                  COUNT(ti.id)        AS itemCount
+             FROM transaction_header th
+             JOIN vendor v ON v.id = th.vendor_id
+             LEFT JOIN transaction_item ti ON ti.transaction_id = th.id
+            GROUP BY th.id
+            ORDER BY th.updated_at DESC, th.id DESC
+            LIMIT ?`,
+        )
+        .all(limit) as TransactionSummary[];
     },
   };
   return repo;

@@ -29,6 +29,7 @@ export function registerIpcHandlers(db: DB): void {
   ipcMain.handle('transaction:update', (_e, id, input) => transactions.update(id, input));
   ipcMain.handle('transaction:remove', (_e, id) => transactions.remove(id));
   ipcMain.handle('transaction:listSummaries', () => transactions.listSummaries());
+  ipcMain.handle('transaction:listRecent', (_e, limit) => transactions.listRecent(limit));
 
   ipcMain.handle('ledger:list', (_e, query) => ledger.list(query));
 }

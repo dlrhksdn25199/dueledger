@@ -6,10 +6,14 @@ import { StatusBadge } from '../status';
 
 export function HomeView() {
   const [summaries, setSummaries] = useState<TransactionSummary[]>([]);
+  const [recent, setRecent] = useState<TransactionSummary[]>([]);
   const today = todayISO();
 
   useEffect(() => {
-    void (async () => setSummaries(await window.api.transaction.listSummaries()))();
+    void (async () => {
+      setSummaries(await window.api.transaction.listSummaries());
+      setRecent(await window.api.transaction.listRecent(5));
+    })();
   }, []);
 
   const c = classifyPayments(summaries, today);
@@ -79,6 +83,41 @@ export function HomeView() {
         {c.undated.count > 0 && (
           <p className="hint">결제일 미정 {c.undated.count}건 ({won(c.undated.total)}원) — 거래처 결제조건을 설정하면 결제일이 계산됩니다.</p>
         )}
+      </section>
+
+      <section>
+        <h2 className="section-title">최근 입력·수정</h2>
+        <table className="grid">
+          <thead>
+            <tr>
+              <th>거래일자</th>
+              <th>거래처</th>
+              <th className="num">금액</th>
+              <th>결제일</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recent.map((s) => (
+              <tr key={s.id}>
+                <td>{s.issueDate}</td>
+                <td>{s.vendorName}</td>
+                <td className="num">{won(s.total)}</td>
+                <td>{s.dueDate ?? '—'}</td>
+                <td>
+                  <StatusBadge status={s.paymentStatus} />
+                </td>
+              </tr>
+            ))}
+            {recent.length === 0 && (
+              <tr>
+                <td colSpan={5} className="empty">
+                  아직 입력한 명세서가 없습니다.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </section>
     </div>
   );

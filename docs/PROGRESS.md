@@ -3,9 +3,20 @@
 > 진행 상황 단일 기록. 매 작업마다 갱신. (정책·결정은 `CLAUDE.md`, 원칙은 `coding-principles.md`)
 
 ## 현재 상태 (2026-06-16)
-**계층**: domain + repository + **Electron/React UI 스캐폴딩** 완료(셸+IPC+3탭 화면). 패키징(.exe)·실기기 클릭검증 미완.
-**테스트**: 68 passing (blackbox + whitebox), `tsc --noEmit` clean, `electron-vite build` 성공(main+preload+renderer 번들).
-**CI**: GitHub Actions — Node 22에서 typecheck + test + build. 브랜치 `feat/domain-repository-foundation`.
+**계층**: domain + repository + **Electron/React UI**(홈 대시보드·달력·상태배지·결제일 수동지정·인라인 거래처/카테고리 생성·최근목록) + **패키징(electron-builder)** 완료.
+**테스트**: 84 passing (blackbox + whitebox), `tsc --noEmit` clean, `electron-vite build` 성공. 스키마 v2(결제일 수동 플래그 + updated_at) 마이그레이션 + 업그레이드/백업 테스트 포함.
+**맥 실기기 검증**: A/B/E 라운드는 패키지된 앱 CDP 스모크 **17/17** 통과(시드·금액·결제일·정렬·삭제가드·홈카드·배지·달력). ⚠️ **이후 라운드(수동결제일·인라인생성·최근목록)는 로컬 better-sqlite3 네이티브 ABI 리빌드가 이 머신에서 막혀 라이브 실행 검증 못 함** — 코드 문제 아님(84 유닛 테스트 + build 통과). CI .exe는 fresh 환경이라 영향 없음. 다음 `시작` 때 클린 머신/`npm ci`에서 `cdp-smoke` 재실행 권장.
+**패키징**: `electron-builder.yml` — win=포터블 .exe(미서명), mac=dir(로컬검증). better-sqlite3 asar 언팩. CI(windows-latest)가 .exe 아티팩트 생성.
+**문서**: `README.md` — 엔드유저용 설치·사용 설명서(한국어). .exe와 함께 전달.
+**CI**: GitHub Actions — ubuntu(typecheck+test+build) + windows(포터블 .exe, `needs: test`). 브랜치 `feat/domain-repository-foundation`.
+
+### ⚙️ 로컬 실행/검증 (better-sqlite3 ABI 주의)
+better-sqlite3는 네이티브 모듈이라 **Node용 빌드와 Electron용 빌드의 ABI가 다르다.** 한 번에 한쪽만 유효.
+- **테스트(Node)**: `npm test` (설치 직후 기본 = Node 프리빌드). 깨졌으면 `npm run rebuild:node`.
+- **앱 실행(Electron)**: `npm run rebuild:electron` → `npm run dev`. (이러면 vitest는 다시 깨짐 → 테스트 전 `rebuild:node`.)
+- CI는 `npm ci`(Node 빌드) + test + build만 — 앱을 실행하지 않으므로 영향 없음.
+- **CDP 스모크**: `npm run rebuild:electron && DUELEDGER_REMOTE_DEBUG=1 npm run dev` (별 셸) → `node scripts/cdp-smoke.mjs`. 헤드리스 CI 불가, 맥/윈도우 데스크톱 세션에서.
+- 메인에 `DUELEDGER_REMOTE_DEBUG` 환경변수가 있을 때만 렌더러 원격 디버깅 포트(9222)를 연다(평소 비활성).
 
 ## 완료
 ### domain/ (DB 없음, 순수 함수)
@@ -37,10 +48,16 @@
 ### UI (Electron + React, electron-vite)
 - `electron.vite.config.ts` · `src/main/{index,ipc}.ts` · `src/preload/index.ts` · `src/shared/api.ts`(IPC 계약) · `src/renderer/**`
 - 메인이 DB/repository 소유, IPC로 노출 → preload contextBridge `window.api` → 렌더러는 IPC만 호출(SQLite 직접접근 ❌, P0 #5).
-- 3탭: **명세서**(테이블 뷰 정렬·필터·검색 + 다품목 입력 폼, vat/total 라이브 미리보기는 domain 함수 재사용) · **거래처** CRUD · **카테고리** CRUD(사용 중 삭제 시 건수 안내).
+- 5탭: **홈**(다가오는 결제 대시보드 — 연체/임박/예정/총미지급 카드 + 챙길 결제 목록) · **명세서**(테이블 뷰 정렬·필터·검색 + 다품목 입력 폼) · **달력**(결제일 월간 캘린더, 미지급=빨강) · **거래처** CRUD · **카테고리** CRUD(사용 중 삭제 시 건수 안내).
+- 결제상태 색상 배지(미지급=빨강/지급예정=노랑/지급완료=회색) + 연체 강조. 홈·달력 로직은 `domain/paymentSchedule`(분류·날짜집계) 순수 함수로 테스트.
+- **결제일 수동 지정**: 폼에서 "직접 지정" 체크 → 자동계산 대신 입력값 저장(`due_date_overridden`). 기본은 자동.
+- **인라인 생성**: 명세서 폼 안에서 거래처(이름만)·카테고리 즉시 추가(탭 이동 불필요). *(Electron `prompt()` 미지원이라 인라인 입력)*
+- **홈 최근 입력·수정**: `updated_at` 기준 최근 5건(`transaction.listRecent`).
 - DB 경로 = `userData/dueledger.db`(%APPDATA%), 첫 실행 시 카테고리 시드.
 
+### ⚠️ 알려진 로컬 이슈 (이 개발 머신)
+- `npm run rebuild:electron`(install-app-deps) / electron-rebuild / node-gyp 모두 이 머신에서 better-sqlite3를 **Node ABI(147)로만** 빌드 → Electron(146) 실행 시 크래시. Electron 헤더 폴백 문제로 추정. 코드/설정 문제 아님(CI .exe·이전 라이브검증은 정상). 클린 체크아웃이나 다른 머신에선 표준대로 동작 예상.
+
 ## 다음
-1. **실기기 클릭 검증** — 윈도우/맥에서 `npm run dev`로 입력·조회·삭제 흐름 확인(헤드리스 CI 불가).
-2. **패키징** — 포터블 .exe(electron-builder 등). 미서명 → 첫 실행 경고 인계 메모.
-3. (선택·나중) 엑셀 임포터 · taxRate 편집 파라미터 · 거래처 결제조건 변경 시 dueDate 재계산 · CategoryInUseError 건수의 IPC 구조화 전달.
+1. **.exe 인계** — CI 아티팩트(`DueLedger-portable-exe`) 다운로드 → 그 1명에게 전달. 미서명이라 첫 실행 시 "추가 정보 → 실행" 1회 안내. productName/아이콘/회사명 확정 시 `electron-builder.yml` 갱신.
+2. (선택·나중) 엑셀 임포터 · taxRate 편집 파라미터 · 거래처 결제조건 변경 시 dueDate 재계산 · CategoryInUseError 건수의 IPC 구조화 전달.

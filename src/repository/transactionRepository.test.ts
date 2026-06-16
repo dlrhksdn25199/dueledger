@@ -165,3 +165,99 @@ describe('transactionRepository — whitebox 파생값', () => {
     expect(i.supplyAmount).toBe(33000);
   });
 });
+
+describe('transactionRepository — 결제일 수동 지정', () => {
+  it('수동 지정이면 자동계산 대신 입력값 저장', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms, // net-30이면 자동 2026-07-16이지만 수동 우선
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+      dueDateOverridden: true,
+      dueDate: '2026-12-25',
+    });
+    const read = repo.getById(t.id)!;
+    expect(read.dueDate).toBe('2026-12-25');
+    expect(read.dueDateOverridden).toBe(true);
+  });
+
+  it('기본(미지정)은 자동계산 + overridden=false', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+    });
+    const read = repo.getById(t.id)!;
+    expect(read.dueDate).toBe('2026-07-16');
+    expect(read.dueDateOverridden).toBe(false);
+  });
+
+  it('update로 수동→자동 전환 시 재계산', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+      dueDateOverridden: true,
+      dueDate: '2099-01-01',
+    });
+    repo.update(t.id, {
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+      // dueDateOverridden 생략 → 자동
+    });
+    const read = repo.getById(t.id)!;
+    expect(read.dueDate).toBe('2026-07-16');
+    expect(read.dueDateOverridden).toBe(false);
+  });
+});
+
+describe('transactionRepository.listRecent', () => {
+  it('최근 생성 순(newest first) + limit', () => {
+    const mk = (memo: string) =>
+      repo.create({ vendorId: vendorWithTerms, issueDate: '2026-06-16', paymentStatus: '미지급', memo, items: [item()] });
+    mk('A');
+    mk('B');
+    const c = mk('C');
+    const recent = repo.listRecent(2);
+    expect(recent).toHaveLength(2);
+    expect(recent[0].id).toBe(c.id); // 가장 최근
+  });
+});
+
+describe('transactionRepository.listSummaries', () => {
+  it('명세서 단위 합계·결제일 정렬(미정은 뒤)', () => {
+    // net-30 거래처: 발행일+30일이 결제일
+    repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16', // due 2026-07-16
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item({ supplyAmount: 10000, taxType: '면세' }), item({ supplyAmount: 5000, taxType: '면세' })],
+    });
+    repo.create({
+      vendorId: vendorNoTerms, // dueDate null
+      issueDate: '2026-06-01',
+      paymentStatus: '지급완료',
+      memo: null,
+      items: [item({ supplyAmount: 7000, taxType: '면세' })],
+    });
+    const sums = repo.listSummaries();
+    expect(sums).toHaveLength(2);
+    // 결제일 있는 것 먼저
+    expect(sums[0].dueDate).toBe('2026-07-16');
+    expect(sums[0].total).toBe(15000); // 두 품목 합계
+    expect(sums[0].itemCount).toBe(2);
+    expect(sums[0].vendorName).toBe('가나상회');
+    // 미정(null)은 뒤
+    expect(sums[1].dueDate).toBeNull();
+    expect(sums[1].paymentStatus).toBe('지급완료');
+  });
+});

@@ -2,7 +2,7 @@
 // DTO 타입은 repository에서 재노출 (전부 type-only → 렌더러 번들에 better-sqlite3 안 딸려옴).
 import type { Vendor, VendorInput } from '../repository/vendorRepository';
 import type { Category } from '../repository/categoryRepository';
-import type { Transaction, TransactionInput } from '../repository/transactionRepository';
+import type { Transaction, TransactionInput, TransactionSummary } from '../repository/transactionRepository';
 import type { LedgerRow, LedgerQuery } from '../repository/ledgerRepository';
 
 export type { Vendor, VendorInput } from '../repository/vendorRepository';
@@ -12,6 +12,7 @@ export type {
   TransactionInput,
   TransactionItem,
   TransactionItemInput,
+  TransactionSummary,
 } from '../repository/transactionRepository';
 export type { LedgerRow, LedgerQuery, SortColumn, LedgerFilter } from '../repository/ledgerRepository';
 export type { TaxType, PaymentStatus, PaymentTerms } from '../domain/types';
@@ -35,6 +36,8 @@ export interface Api {
     create(input: TransactionInput): Promise<Transaction>;
     update(id: number, input: TransactionInput): Promise<Transaction>;
     remove(id: number): Promise<void>;
+    listSummaries(): Promise<TransactionSummary[]>;
+    listRecent(limit: number): Promise<TransactionSummary[]>;
   };
   ledger: {
     list(query?: LedgerQuery): Promise<LedgerRow[]>;

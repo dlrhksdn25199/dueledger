@@ -8,7 +8,9 @@ import type {
   Transaction,
   Vendor,
 } from '../../../shared/api';
-import { won, nullable } from '../format';
+import { won, nullable, todayISO } from '../format';
+import { isOverdue } from '../../../domain/paymentSchedule';
+import { StatusBadge } from '../status';
 import { TransactionForm } from './TransactionForm';
 
 const PAYMENT_STATUSES: PaymentStatus[] = ['미지급', '지급예정', '지급완료'];
@@ -40,6 +42,7 @@ export function LedgerView() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const today = todayISO();
 
   const reload = useCallback(async () => {
     const query: LedgerQuery = { sort };
@@ -52,12 +55,13 @@ export function LedgerView() {
     setRows(await window.api.ledger.list(query));
   }, [vendorId, status, month, search, sort]);
 
-  useEffect(() => {
-    void (async () => {
-      setVendors(await window.api.vendor.list());
-      setCategories(await window.api.category.list());
-    })();
+  const loadLists = useCallback(async () => {
+    setVendors(await window.api.vendor.list());
+    setCategories(await window.api.category.list());
   }, []);
+  useEffect(() => {
+    void loadLists();
+  }, [loadLists]);
   useEffect(() => {
     void reload();
   }, [reload]);
@@ -147,8 +151,12 @@ export function LedgerView() {
               <td>{nullable(r.categoryName)}</td>
               <td className="num">{won(r.supplyAmount)}</td>
               <td className="num">{won(r.total)}</td>
-              <td>{r.paymentStatus}</td>
-              <td>{nullable(r.dueDate)}</td>
+              <td>
+                <StatusBadge status={r.paymentStatus} />
+              </td>
+              <td className={isOverdue(r.dueDate, r.paymentStatus, today) ? 'overdue' : ''}>
+                {nullable(r.dueDate)}
+              </td>
               <td>{r.itemName}</td>
               <td>{nullable(r.spec)}</td>
               <td className="num">{r.quantity ?? ''}</td>
@@ -179,6 +187,7 @@ export function LedgerView() {
           editing={editing}
           onSaved={() => {
             setFormOpen(false);
+            void loadLists(); // 인라인 생성된 거래처·카테고리 반영
             void reload();
           }}
           onCancel={() => setFormOpen(false)}

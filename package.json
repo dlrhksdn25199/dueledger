@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "rebuild:electron": "electron-builder install-app-deps",
+    "rebuild:node": "npm rebuild better-sqlite3",
+    "package:win": "electron-vite build && electron-builder --win portable",
+    "package:mac": "electron-vite build && electron-builder --mac dir"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
@@ -19,6 +23,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^42.4.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "typescript": "^5.7.2",
     "vite": "^7.3.5",

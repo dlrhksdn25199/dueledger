@@ -16,3 +16,20 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # 포터블 .exe 생성 — 테스트 통과 후에만. electron-builder가 better-sqlite3를 Electron(win)용으로 리빌드.
+  package-win:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run package:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DueLedger-portable-exe
+          path: release/*.exe
+          if-no-files-found: error

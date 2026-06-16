@@ -80,11 +80,24 @@ function rowToItem(r: ItemRow): TransactionItem {
   };
 }
 
+// 명세서 1장 단위 결제 요약 (홈 대시보드·캘린더용). total = 그 명세서 품목 합계.
+export interface TransactionSummary {
+  id: number;
+  vendorId: number;
+  vendorName: string;
+  issueDate: string;
+  dueDate: string | null;
+  paymentStatus: PaymentStatus;
+  total: number;
+  itemCount: number;
+}
+
 export interface TransactionRepository {
   create(input: TransactionInput): Transaction;
   getById(id: number): Transaction | null;
   update(id: number, input: TransactionInput): Transaction;
   remove(id: number): void;
+  listSummaries(): TransactionSummary[];
 }
 
 export function createTransactionRepository(db: DB): TransactionRepository {
@@ -191,6 +204,28 @@ export function createTransactionRepository(db: DB): TransactionRepository {
         db.prepare(`DELETE FROM transaction_header WHERE id = ?`).run(id);
       });
       tx();
+    },
+
+    // 명세서 단위 요약 — 품목 합계(total)를 한 줄로. 결제일 빠른 것부터(미정은 뒤).
+    listSummaries() {
+      const rows = db
+        .prepare(
+          `SELECT th.id              AS id,
+                  th.vendor_id        AS vendorId,
+                  v.name              AS vendorName,
+                  th.issue_date       AS issueDate,
+                  th.due_date         AS dueDate,
+                  th.payment_status   AS paymentStatus,
+                  COALESCE(SUM(ti.total), 0) AS total,
+                  COUNT(ti.id)        AS itemCount
+             FROM transaction_header th
+             JOIN vendor v ON v.id = th.vendor_id
+             LEFT JOIN transaction_item ti ON ti.transaction_id = th.id
+            GROUP BY th.id
+            ORDER BY th.due_date IS NULL, th.due_date ASC`,
+        )
+        .all() as TransactionSummary[];
+      return rows;
     },
   };
   return repo;

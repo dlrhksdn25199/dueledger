@@ -10,9 +10,12 @@
     "typecheck": "tsc --noEmit",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:node": "npm rebuild better-sqlite3"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.9.3",
     "@types/react": "^19.2.17",

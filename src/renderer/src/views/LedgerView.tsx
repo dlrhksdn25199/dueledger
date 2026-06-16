@@ -55,12 +55,13 @@ export function LedgerView() {
     setRows(await window.api.ledger.list(query));
   }, [vendorId, status, month, search, sort]);
 
-  useEffect(() => {
-    void (async () => {
-      setVendors(await window.api.vendor.list());
-      setCategories(await window.api.category.list());
-    })();
+  const loadLists = useCallback(async () => {
+    setVendors(await window.api.vendor.list());
+    setCategories(await window.api.category.list());
   }, []);
+  useEffect(() => {
+    void loadLists();
+  }, [loadLists]);
   useEffect(() => {
     void reload();
   }, [reload]);
@@ -186,6 +187,7 @@ export function LedgerView() {
           editing={editing}
           onSaved={() => {
             setFormOpen(false);
+            void loadLists(); // 인라인 생성된 거래처·카테고리 반영
             void reload();
           }}
           onCancel={() => setFormOpen(false)}

@@ -9,7 +9,8 @@ import type {
   PaymentStatus,
 } from '../../../shared/api';
 import { computeVat, computeTotal } from '../../../domain/amount';
-import { won } from '../format';
+import { computeDueDate } from '../../../domain/paymentDate';
+import { won, todayISO } from '../format';
 
 const PAYMENT_STATUSES: PaymentStatus[] = ['미지급', '지급예정', '지급완료'];
 const TAX_TYPES: TaxType[] = ['과세', '면세'];
@@ -56,12 +57,29 @@ interface Props {
 }
 
 export function TransactionForm({ vendors, categories, editing, onSaved, onCancel }: Props) {
+  const [vendorList, setVendorList] = useState<Vendor[]>(vendors);
+  const [categoryList, setCategoryList] = useState<Category[]>(categories);
+
   const [vendorId, setVendorId] = useState<string>(editing ? String(editing.vendorId) : '');
-  const [issueDate, setIssueDate] = useState(editing?.issueDate ?? new Date().toISOString().slice(0, 10));
+  const [issueDate, setIssueDate] = useState(editing?.issueDate ?? todayISO());
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(editing?.paymentStatus ?? '미지급');
   const [memo, setMemo] = useState(editing?.memo ?? '');
   const [items, setItems] = useState<ItemForm[]>(editing ? editing.items.map(itemToForm) : [emptyItem()]);
   const [error, setError] = useState<string | null>(null);
+
+  // 결제일 수동 지정
+  const [manualDue, setManualDue] = useState<boolean>(editing?.dueDateOverridden ?? false);
+  const [manualDueDate, setManualDueDate] = useState<string>(editing?.dueDate ?? '');
+
+  // 인라인 생성
+  const [showVendorAdd, setShowVendorAdd] = useState(false);
+  const [newVendorName, setNewVendorName] = useState('');
+  const [showCatAdd, setShowCatAdd] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+
+  const selectedVendor = vendorList.find((v) => v.id === Number(vendorId));
+  // 자동 결제일 미리보기 (거래처 결제조건 + 발행일)
+  const autoDue = selectedVendor?.paymentTerms ? computeDueDate(issueDate, selectedVendor.paymentTerms) : null;
 
   function updateItem(idx: number, patch: Partial<ItemForm>) {
     setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
@@ -73,7 +91,30 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
     setItems((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== idx)));
   }
 
-  // 라인 미리보기 (domain 공식 재사용 — 백엔드 저장값과 동일)
+  async function addVendorInline() {
+    const name = newVendorName.trim();
+    if (name === '') return;
+    const v = await window.api.vendor.create({ name, paymentTerms: null });
+    setVendorList((prev) => [...prev, v]);
+    setVendorId(String(v.id));
+    setNewVendorName('');
+    setShowVendorAdd(false);
+  }
+
+  async function addCategoryInline() {
+    const name = newCatName.trim();
+    if (name === '') return;
+    const c = await window.api.category.create(name);
+    setCategoryList((prev) => [...prev, c]);
+    setNewCatName('');
+    setShowCatAdd(false);
+  }
+
+  function toggleManualDue(on: boolean) {
+    setManualDue(on);
+    if (on && manualDueDate === '') setManualDueDate(autoDue ?? issueDate);
+  }
+
   function preview(it: ItemForm): { vat: number; total: number } {
     const supply = toNumberOrNull(it.supplyAmount) ?? 0;
     const vat = computeVat(supply, it.taxType);
@@ -110,6 +151,8 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
       paymentStatus,
       memo: memo.trim() === '' ? null : memo,
       items: itemInputs,
+      dueDateOverridden: manualDue,
+      dueDate: manualDue ? (manualDueDate.trim() === '' ? null : manualDueDate) : undefined,
     };
     if (editing) await window.api.transaction.update(editing.id, input);
     else await window.api.transaction.create(input);
@@ -125,12 +168,33 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
           <label>거래처</label>
           <select value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
             <option value="">선택</option>
-            {vendors.map((v) => (
+            {vendorList.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
               </option>
             ))}
           </select>
+          {!showVendorAdd ? (
+            <button onClick={() => setShowVendorAdd(true)}>+ 새 거래처</button>
+          ) : (
+            <>
+              <input
+                autoFocus
+                value={newVendorName}
+                onChange={(e) => setNewVendorName(e.target.value)}
+                placeholder="새 거래처명"
+                onKeyDown={(e) => e.key === 'Enter' && void addVendorInline()}
+                style={{ width: 140 }}
+              />
+              <button className="primary" onClick={() => void addVendorInline()}>
+                추가
+              </button>
+              <button onClick={() => setShowVendorAdd(false)}>취소</button>
+            </>
+          )}
+        </div>
+
+        <div className="form-row">
           <label>발행일</label>
           <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
           <label>결제상태</label>
@@ -142,9 +206,46 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
             ))}
           </select>
         </div>
+
+        <div className="form-row">
+          <label>결제일</label>
+          <label className="checkbox">
+            <input type="checkbox" checked={manualDue} onChange={(e) => toggleManualDue(e.target.checked)} /> 직접
+            지정
+          </label>
+          {manualDue ? (
+            <input type="date" value={manualDueDate} onChange={(e) => setManualDueDate(e.target.value)} />
+          ) : (
+            <span className="auto-due">
+              자동: {autoDue ?? '거래처 결제조건이 없어 계산 안 됨'}
+            </span>
+          )}
+        </div>
+
         <div className="form-row">
           <label>비고</label>
           <input value={memo} onChange={(e) => setMemo(e.target.value)} style={{ flex: 1 }} placeholder="(선택)" />
+        </div>
+
+        <div className="items-bar">
+          {!showCatAdd ? (
+            <button onClick={() => setShowCatAdd(true)}>+ 새 카테고리</button>
+          ) : (
+            <>
+              <input
+                autoFocus
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder="새 카테고리명"
+                onKeyDown={(e) => e.key === 'Enter' && void addCategoryInline()}
+                style={{ width: 140 }}
+              />
+              <button className="primary" onClick={() => void addCategoryInline()}>
+                추가
+              </button>
+              <button onClick={() => setShowCatAdd(false)}>취소</button>
+            </>
+          )}
         </div>
 
         <table className="grid items">
@@ -170,7 +271,7 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
                   <td>
                     <select value={it.categoryId} onChange={(e) => updateItem(idx, { categoryId: e.target.value })}>
                       <option value="">미분류</option>
-                      {categories.map((c) => (
+                      {categoryList.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>

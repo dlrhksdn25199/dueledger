@@ -55,7 +55,20 @@ const v1: Migration = {
   },
 };
 
-export const MIGRATIONS: readonly Migration[] = [v1];
+// v2: 결제일 수동 지정 플래그 + 최근 수정 추적 (가산적, P0 #6).
+//   due_date_overridden=1 이면 update 시 dueDate를 재계산하지 않고 입력값을 유지.
+//   updated_at = 생성/수정 시각(ISO) — 홈 "최근 건드린 것"용.
+const v2: Migration = {
+  version: 2,
+  up: (db) => {
+    db.exec(`
+      ALTER TABLE transaction_header ADD COLUMN due_date_overridden INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE transaction_header ADD COLUMN updated_at TEXT;
+    `);
+  },
+};
+
+export const MIGRATIONS: readonly Migration[] = [v1, v2];
 
 // 최신 스키마 버전 = 마이그레이션 중 가장 큰 version
 export const LATEST_VERSION = MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0);

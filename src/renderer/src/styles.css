@@ -184,6 +184,22 @@ table.items input,
 table.items select {
   width: 100%;
 }
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0 !important;
+  color: #3e4c59;
+}
+.auto-due {
+  color: #6b7785;
+  font-size: 13px;
+}
+.items-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 
 /* 상태 배지 (B) */
 .badge {

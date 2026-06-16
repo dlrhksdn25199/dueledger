@@ -160,6 +160,59 @@ const calAmounts = await evalJS(`Array.from(document.querySelectorAll('.cal-amou
 check('캘린더 7월에 결제(13,580) 표시', calAmounts.includes('13,580'), calAmounts.join(','));
 await shot('08-calendar');
 
+// 9) 인라인 거래처/카테고리 생성 + 수동 결제일
+await evalJS(`__t.clickText('.tab','명세서')`);
+await sleep(300);
+await evalJS(`__t.clickText('.toolbar button','+ 새 명세서')`);
+await sleep(400);
+// 인라인 거래처
+await evalJS(`__t.clickText('.modal button','+ 새 거래처')`);
+await sleep(200);
+await evalJS(`__t.setInput(document.querySelector('.modal input[placeholder="새 거래처명"]'),'직접거래처'); true`);
+await evalJS(`__t.clickText('.modal button','추가')`);
+await sleep(400);
+const vSel = await evalJS(`(()=>{const s=document.querySelector('.modal select');return s.options[s.selectedIndex].textContent.trim();})()`);
+check('인라인 거래처 생성·자동선택', vSel === '직접거래처', vSel);
+// 인라인 카테고리
+await evalJS(`__t.clickText('.modal button','+ 새 카테고리')`);
+await sleep(200);
+await evalJS(`__t.setInput(document.querySelector('.modal input[placeholder="새 카테고리명"]'),'신규분류'); true`);
+await evalJS(`__t.clickText('.modal button','추가')`);
+await sleep(400);
+const catOpts = await evalJS(`Array.from(document.querySelectorAll('.items tbody tr:first-child select option')).map(o=>o.textContent.trim())`);
+check('인라인 카테고리 생성(드롭다운 반영)', catOpts.includes('신규분류'), catOpts.join(','));
+// 수동 결제일 지정
+await evalJS(`document.querySelector('.modal input[type=checkbox]').click(); true`);
+await sleep(300);
+await evalJS(`(()=>{const ds=document.querySelectorAll('.modal input[type=date]'); __t.setInput(ds[ds.length-1],'2026-08-01');})(); true`);
+// 발행일도 명시
+await evalJS(`__t.setInput(document.querySelectorAll('.modal input[type=date]')[0],'2026-06-16'); true`);
+// 품목
+await evalJS(`
+  __t.selByText(document.querySelectorAll('.items tbody tr:first-child select')[0],'신규분류');
+  const ins=document.querySelectorAll('.items tbody tr:first-child td input');
+  __t.setInput(ins[0],'특별품목'); __t.setInput(ins[4],'20000'); true
+`);
+await sleep(200);
+await shot('09-form-manual');
+await evalJS(`__t.clickText('.modal button','저장')`);
+await sleep(600);
+const led2 = await evalJS(`__t.rows('table.grid.ledger')`);
+const row2 = led2.find((r) => r[1] === '직접거래처' && r[3] === '20,000');
+check('수동 결제일 명세서 생성', !!row2, `rows=${led2.length}`);
+if (row2) {
+  check('수동 결제일 2026-08-01 저장', row2[6] === '2026-08-01', row2[6]);
+  check('인라인 카테고리(신규분류) 적용', row2[2] === '신규분류', row2[2]);
+}
+await shot('10-ledger2');
+
+// 10) 홈 최근 입력·수정에 방금 것 표시
+await evalJS(`__t.clickText('.tab','홈')`);
+await sleep(400);
+const recentHas = await evalJS(`(()=>{const t=document.querySelectorAll('table.grid');const last=t[t.length-1];return Array.from(last.querySelectorAll('tbody tr td')).some(td=>td.textContent.trim()==='직접거래처');})()`);
+check('홈 최근 입력에 직접거래처 표시', recentHas === true);
+await shot('11-home-recent');
+
 console.log(`\n=== RESULT: ${pass.length} passed, ${fail.length} failed ===`);
 if (fail.length) console.log('FAILED: ' + fail.join(' | '));
 ws.close();

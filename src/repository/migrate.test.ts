@@ -2,9 +2,10 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { existsSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import Database from 'better-sqlite3';
 import { openDatabase } from './db';
 import { migrate, backupDatabaseFile } from './migrate';
-import { LATEST_VERSION } from './schema';
+import { LATEST_VERSION, MIGRATIONS } from './schema';
 
 const tmpFiles: string[] = [];
 function tmpPath(): string {
@@ -65,6 +66,31 @@ describe('migrate — whitebox', () => {
       n.startsWith(`${path.split('/').pop()}.backup`),
     );
     expect(backups).toHaveLength(0);
+  });
+
+  it('v1 DB → 최신으로 업그레이드: 데이터 보존 + 백업 생성 (P0 #6 첫 실전)', () => {
+    const path = tmpPath();
+    // v1 상태의 DB를 수동 구성 (초기 마이그레이션만 적용)
+    const raw = new Database(path);
+    MIGRATIONS[0].up(raw);
+    raw.pragma('user_version = 1');
+    raw.prepare(`INSERT INTO vendor (name) VALUES ('보존회사')`).run();
+    raw.close();
+
+    // openDatabase가 v2까지 전진 마이그레이션
+    const db = openDatabase(path);
+    expect(db.pragma('user_version', { simple: true })).toBe(LATEST_VERSION);
+    // v2 추가 컬럼 존재
+    const cols = (db.prepare(`PRAGMA table_info(transaction_header)`).all() as { name: string }[]).map((c) => c.name);
+    expect(cols).toEqual(expect.arrayContaining(['due_date_overridden', 'updated_at']));
+    // 기존 데이터 보존
+    expect(db.prepare(`SELECT name FROM vendor`).get()).toEqual({ name: '보존회사' });
+    db.close();
+
+    // 데이터 있는 DB(version>0)를 올렸으니 백업이 1개 생성됨 (P0 #6b)
+    const base = path.split('/').pop();
+    const backups = readdirSync(tmpdir()).filter((n) => n.startsWith(`${base}.backup`));
+    expect(backups).toHaveLength(1);
   });
 
   it('backupDatabaseFile: 기존 파일을 동일 내용으로 복사한다 (P0 #6b)', () => {

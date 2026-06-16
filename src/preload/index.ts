@@ -22,6 +22,7 @@ const api: Api = {
     update: (id, input) => ipcRenderer.invoke('transaction:update', id, input),
     remove: (id) => ipcRenderer.invoke('transaction:remove', id),
     listSummaries: () => ipcRenderer.invoke('transaction:listSummaries'),
+    listRecent: (limit) => ipcRenderer.invoke('transaction:listRecent', limit),
   },
   ledger: {
     list: (query) => ipcRenderer.invoke('ledger:list', query),

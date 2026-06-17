@@ -102,6 +102,7 @@ export interface TransactionRepository {
   create(input: TransactionInput): Transaction;
   getById(id: number): Transaction | null;
   update(id: number, input: TransactionInput): Transaction;
+  setPaymentStatus(id: number, status: PaymentStatus): void; // 결제상태만 빠르게 변경(목록에서 토글)
   remove(id: number): void;
   listSummaries(): TransactionSummary[];
   listRecent(limit: number): TransactionSummary[];
@@ -220,6 +221,15 @@ export function createTransactionRepository(db: DB): TransactionRepository {
       });
       tx();
       return repo.getById(id)!;
+    },
+
+    // 결제상태만 변경(헤더 1줄). 품목·dueDate는 건드리지 않음. 목록에서 배지 클릭 토글용.
+    setPaymentStatus(id, status) {
+      const now = new Date().toISOString();
+      const info = db
+        .prepare(`UPDATE transaction_header SET payment_status = ?, updated_at = ? WHERE id = ?`)
+        .run(status, now, id);
+      if (info.changes === 0) throw new Error(`Transaction not found: ${id}`);
     },
 
     remove(id) {

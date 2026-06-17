@@ -5,6 +5,7 @@ import type { Category } from '../repository/categoryRepository';
 import type { Transaction, TransactionInput, TransactionSummary } from '../repository/transactionRepository';
 import type { LedgerRow, LedgerQuery } from '../repository/ledgerRepository';
 import type { ImportSummary } from '../repository/importRepository';
+import type { PaymentStatus } from '../domain/types';
 
 export type { Vendor, VendorInput } from '../repository/vendorRepository';
 export type { ImportSummary } from '../repository/importRepository';
@@ -37,6 +38,7 @@ export interface Api {
     get(id: number): Promise<Transaction | null>;
     create(input: TransactionInput): Promise<Transaction>;
     update(id: number, input: TransactionInput): Promise<Transaction>;
+    setPaymentStatus(id: number, status: PaymentStatus): Promise<void>;
     remove(id: number): Promise<void>;
     listSummaries(): Promise<TransactionSummary[]>;
     listRecent(limit: number): Promise<TransactionSummary[]>;

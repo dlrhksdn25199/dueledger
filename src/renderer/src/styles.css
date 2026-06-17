@@ -219,8 +219,19 @@ table.items select {
   color: #b7791f;
 }
 .badge.paid {
-  background: #e6e9ed;
-  color: #6b7785;
+  background: #dcfce7;
+  color: #15803d;
+}
+/* 클릭 가능한 결제상태 배지(명세서 목록 토글) */
+.badge-btn {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: inherit;
+}
+.badge-btn:hover {
+  filter: brightness(0.95);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12) inset;
 }
 td.overdue {
   color: #c0392b;

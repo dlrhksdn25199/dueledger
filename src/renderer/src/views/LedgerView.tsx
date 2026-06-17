@@ -97,6 +97,14 @@ export function LedgerView() {
     await reload();
   }
 
+  // 결제상태 배지 클릭 → 다음 상태로 순환(미지급 → 지급예정 → 지급완료 → …) 후 저장.
+  async function cyclePaymentStatus(transactionId: number, current: PaymentStatus) {
+    const i = PAYMENT_STATUSES.indexOf(current);
+    const next = PAYMENT_STATUSES[(i + 1) % PAYMENT_STATUSES.length];
+    await window.api.transaction.setPaymentStatus(transactionId, next);
+    await reload();
+  }
+
   return (
     <div className="view">
       <section className="toolbar">
@@ -155,7 +163,10 @@ export function LedgerView() {
               <td className="num">{won(r.supplyAmount)}</td>
               <td className="num">{won(r.total)}</td>
               <td>
-                <StatusBadge status={r.paymentStatus} />
+                <StatusBadge
+                  status={r.paymentStatus}
+                  onClick={() => void cyclePaymentStatus(r.transactionId, r.paymentStatus)}
+                />
               </td>
               <td className={isOverdue(r.dueDate, r.paymentStatus, today) ? 'overdue' : ''}>
                 {nullable(r.dueDate)}

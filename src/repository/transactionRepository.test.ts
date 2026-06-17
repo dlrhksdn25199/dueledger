@@ -219,6 +219,27 @@ describe('transactionRepository — 결제일 수동 지정', () => {
   });
 });
 
+describe('transactionRepository.setPaymentStatus', () => {
+  it('결제상태만 바꾸고 품목·결제일은 유지', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item({ supplyAmount: 10000 }), item({ supplyAmount: 5000 })],
+    });
+    repo.setPaymentStatus(t.id, '지급완료');
+    const after = repo.getById(t.id)!;
+    expect(after.paymentStatus).toBe('지급완료');
+    expect(after.dueDate).toBe(t.dueDate); // 결제일 불변
+    expect(after.items).toHaveLength(2); // 품목 불변
+  });
+
+  it('없는 id면 throw', () => {
+    expect(() => repo.setPaymentStatus(9999, '지급완료')).toThrow();
+  });
+});
+
 describe('transactionRepository.listRecent', () => {
   it('최근 생성 순(newest first) + limit', () => {
     const mk = (memo: string) =>

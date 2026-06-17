@@ -20,6 +20,7 @@ const api: Api = {
     get: (id) => ipcRenderer.invoke('transaction:get', id),
     create: (input) => ipcRenderer.invoke('transaction:create', input),
     update: (id, input) => ipcRenderer.invoke('transaction:update', id, input),
+    setPaymentStatus: (id, status) => ipcRenderer.invoke('transaction:setPaymentStatus', id, status),
     remove: (id) => ipcRenderer.invoke('transaction:remove', id),
     listSummaries: () => ipcRenderer.invoke('transaction:listSummaries'),
     listRecent: (limit) => ipcRenderer.invoke('transaction:listRecent', limit),

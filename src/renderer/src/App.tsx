@@ -21,7 +21,7 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>거래명세서 정리 도구</h1>
+        <h1>DueLedger</h1>
         <nav className="tabs">
           {TABS.map((t) => (
             <button

@@ -19,6 +19,7 @@ function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,
     height: 860,
+    title: 'DueLedger',
     icon: APP_ICON,
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),

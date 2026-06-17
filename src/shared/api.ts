@@ -4,8 +4,10 @@ import type { Vendor, VendorInput } from '../repository/vendorRepository';
 import type { Category } from '../repository/categoryRepository';
 import type { Transaction, TransactionInput, TransactionSummary } from '../repository/transactionRepository';
 import type { LedgerRow, LedgerQuery } from '../repository/ledgerRepository';
+import type { ImportSummary } from '../repository/importRepository';
 
 export type { Vendor, VendorInput } from '../repository/vendorRepository';
+export type { ImportSummary } from '../repository/importRepository';
 export type { Category } from '../repository/categoryRepository';
 export type {
   Transaction,
@@ -41,5 +43,13 @@ export interface Api {
   };
   ledger: {
     list(query?: LedgerQuery): Promise<LedgerRow[]>;
+  };
+  import: {
+    // 파일 선택 대화상자 → 선택한 .xlsx 경로(취소 시 null).
+    openDialog(): Promise<string | null>;
+    // 적재 전 미리보기(쓰기 없음): 신규/중복/자동생성 집계.
+    preview(filePath: string): Promise<ImportSummary>;
+    // 한 트랜잭션으로 적재.
+    commit(filePath: string): Promise<ImportSummary>;
   };
 }

@@ -12,6 +12,7 @@ import { won, nullable, todayISO } from '../format';
 import { isOverdue } from '../../../domain/paymentSchedule';
 import { StatusBadge } from '../status';
 import { TransactionForm } from './TransactionForm';
+import { ImportDialog } from './ImportDialog';
 
 const PAYMENT_STATUSES: PaymentStatus[] = ['미지급', '지급예정', '지급완료'];
 
@@ -41,6 +42,7 @@ export function LedgerView() {
   });
 
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const today = todayISO();
 
@@ -121,6 +123,7 @@ export function LedgerView() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <span className="spacer" />
+        <button onClick={() => setImportOpen(true)}>엑셀 가져오기</button>
         <button className="primary" onClick={openNew}>
           + 새 명세서
         </button>
@@ -191,6 +194,16 @@ export function LedgerView() {
             void reload();
           }}
           onCancel={() => setFormOpen(false)}
+        />
+      )}
+
+      {importOpen && (
+        <ImportDialog
+          onClose={() => setImportOpen(false)}
+          onImported={() => {
+            void loadLists(); // 자동 생성된 거래처·카테고리 반영
+            void reload();
+          }}
         />
       )}
     </div>

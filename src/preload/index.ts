@@ -27,6 +27,11 @@ const api: Api = {
   ledger: {
     list: (query) => ipcRenderer.invoke('ledger:list', query),
   },
+  import: {
+    openDialog: () => ipcRenderer.invoke('import:openDialog'),
+    preview: (filePath) => ipcRenderer.invoke('import:preview', filePath),
+    commit: (filePath) => ipcRenderer.invoke('import:commit', filePath),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

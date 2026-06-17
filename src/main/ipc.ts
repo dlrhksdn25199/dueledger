@@ -1,16 +1,19 @@
 // IPC 핸들러 등록 — 채널 → repository 호출 매핑. 렌더러는 이 채널로만 데이터에 닿는다 (P0 #5).
-import { ipcMain } from 'electron';
+import { ipcMain, dialog, BrowserWindow } from 'electron';
 import type { DB } from '../repository/db';
 import { createVendorRepository } from '../repository/vendorRepository';
 import { createCategoryRepository } from '../repository/categoryRepository';
 import { createTransactionRepository } from '../repository/transactionRepository';
 import { createLedgerRepository } from '../repository/ledgerRepository';
+import { createImportRepository } from '../repository/importRepository';
+import { parseLedgerWorkbook } from '../parser/excelImport';
 
 export function registerIpcHandlers(db: DB): void {
   const vendors = createVendorRepository(db);
   const categories = createCategoryRepository(db);
   const transactions = createTransactionRepository(db);
   const ledger = createLedgerRepository(db);
+  const importer = createImportRepository(db);
 
   ipcMain.handle('vendor:list', () => vendors.getAll());
   ipcMain.handle('vendor:create', (_e, input) => vendors.create(input));
@@ -32,4 +35,17 @@ export function registerIpcHandlers(db: DB): void {
   ipcMain.handle('transaction:listRecent', (_e, limit) => transactions.listRecent(limit));
 
   ipcMain.handle('ledger:list', (_e, query) => ledger.list(query));
+
+  // 엑셀 임포트 — 파일 선택은 메인의 네이티브 대화상자, 파싱→적재는 parser+importRepository.
+  ipcMain.handle('import:openDialog', (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender) ?? undefined;
+    const res = dialog.showOpenDialogSync(win!, {
+      title: '거래명세서 엑셀 선택',
+      filters: [{ name: '엑셀 파일', extensions: ['xlsx', 'xls'] }],
+      properties: ['openFile'],
+    });
+    return res && res.length ? res[0] : null;
+  });
+  ipcMain.handle('import:preview', (_e, filePath: string) => importer.preview(parseLedgerWorkbook(filePath)));
+  ipcMain.handle('import:commit', (_e, filePath: string) => importer.commit(parseLedgerWorkbook(filePath)));
 }

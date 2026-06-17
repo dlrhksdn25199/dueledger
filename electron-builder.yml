@@ -11,6 +11,7 @@ asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 # 단일 사용자 포터블 .exe (설치 마법사 없음, 더블클릭). 미서명 → 첫 실행 시 윈도우 경고 1회.
 win:
+  icon: docs/dueledger-icon.ico
   target:
     - portable
 portable:

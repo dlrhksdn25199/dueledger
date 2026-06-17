@@ -311,7 +311,6 @@ export function LedgerView({ nav, onNavConsumed }: Props = {}) {
               <td className="num">{won(r.vat)}</td>
               <td>{nullable(r.memo)}</td>
               <td className="row-actions">
-                <button onClick={() => void openEdit(r.transactionId)}>수정</button>
                 <button className="danger" onClick={() => void removeTransaction(r.transactionId)}>
                   삭제
                 </button>

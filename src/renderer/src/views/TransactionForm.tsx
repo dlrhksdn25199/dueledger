@@ -11,6 +11,7 @@ import type {
 import { computeVat, computeTotal } from '../../../domain/amount';
 import { computeDueDate } from '../../../domain/paymentDate';
 import { won, todayISO } from '../format';
+import { useDialog } from '../ui/dialog';
 
 const PAYMENT_STATUSES: PaymentStatus[] = ['미지급', '지급예정', '지급완료'];
 const TAX_TYPES: TaxType[] = ['과세', '면세'];
@@ -57,6 +58,7 @@ interface Props {
 }
 
 export function TransactionForm({ vendors, categories, editing, onSaved, onCancel }: Props) {
+  const dialog = useDialog();
   const [vendorList, setVendorList] = useState<Vendor[]>(vendors);
   const [categoryList, setCategoryList] = useState<Category[]>(categories);
 
@@ -152,6 +154,19 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
     if (editing) await window.api.transaction.update(editing.id, input);
     else await window.api.transaction.create(input);
     onSaved();
+  }
+
+  // 수정 중인 명세서 삭제(폼 안에서). 확인 후 삭제하고 닫음.
+  async function removeStatement() {
+    if (!editing) return;
+    const ok = await dialog.confirm({
+      message: '이 명세서를 삭제할까요? (품목 전체 삭제)',
+      danger: true,
+      confirmText: '삭제',
+    });
+    if (!ok) return;
+    await window.api.transaction.remove(editing.id);
+    onSaved(); // 닫고 목록 갱신
   }
 
   return (
@@ -375,6 +390,11 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
             저장
           </button>
           <button onClick={onCancel}>취소</button>
+          {editing && (
+            <button className="danger" style={{ marginLeft: 'auto' }} onClick={() => void removeStatement()}>
+              삭제
+            </button>
+          )}
         </div>
       </div>
     </div>

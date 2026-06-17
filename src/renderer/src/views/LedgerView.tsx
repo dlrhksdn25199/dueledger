@@ -13,6 +13,7 @@ import { isOverdue } from '../../../domain/paymentSchedule';
 import { StatusBadge } from '../status';
 import { TransactionForm } from './TransactionForm';
 import { ImportDialog } from './ImportDialog';
+import { useDialog } from '../ui/dialog';
 
 const PAYMENT_STATUSES: PaymentStatus[] = ['미지급', '지급예정', '지급완료'];
 
@@ -38,6 +39,7 @@ export function LedgerView({ nav, onNavConsumed }: Props = {}) {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [highlightId, setHighlightId] = useState<number | null>(null);
+  const dialog = useDialog();
 
   const [vendorId, setVendorId] = useState('');
   const [status, setStatus] = useState('');
@@ -130,7 +132,12 @@ export function LedgerView({ nav, onNavConsumed }: Props = {}) {
     }
   }
   async function removeTransaction(transactionId: number) {
-    if (!confirm('이 명세서를 삭제할까요? (품목 전체 삭제)')) return;
+    const ok = await dialog.confirm({
+      message: '이 명세서를 삭제할까요? (품목 전체 삭제)',
+      danger: true,
+      confirmText: '삭제',
+    });
+    if (!ok) return;
     await window.api.transaction.remove(transactionId);
     await reload();
   }
@@ -160,7 +167,10 @@ export function LedgerView({ nav, onNavConsumed }: Props = {}) {
     setEditCell(null);
     if (!value) return;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      alert('날짜 형식이 올바르지 않습니다 (YYYY-MM-DD). 연도는 네 자리로 입력하세요.');
+      await dialog.alert({
+        title: '날짜 형식 오류',
+        message: '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD). 연도는 네 자리로 입력하세요.',
+      });
       return;
     }
     if (field === 'issue') await window.api.transaction.setIssueDate(transactionId, value);
@@ -174,7 +184,7 @@ export function LedgerView({ nav, onNavConsumed }: Props = {}) {
       vendorId === '' ? '전체거래처' : (vendors.find((v) => v.id === Number(vendorId))?.name ?? '거래처');
     const defaultName = `${vendorLabel} 명세서_DueLedger.xlsx`;
     const res = await window.api.exportLedger(buildQuery(), defaultName);
-    if (res) alert(`엑셀로 내보냈습니다.\n${res.count}줄 → ${res.path}`);
+    if (res) await dialog.alert({ title: '내보내기 완료', message: `${res.count}줄을 저장했습니다.\n${res.path}` });
   }
 
   return (

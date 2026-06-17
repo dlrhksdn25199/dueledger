@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Vendor, PaymentTerms } from '../../../shared/api';
+import { useDialog } from '../ui/dialog';
 
 type TermsType = 'none' | 'net' | 'dayOfMonth';
 
@@ -27,6 +28,7 @@ export function VendorView() {
   const [termsValue, setTermsValue] = useState('');
   const [phone, setPhone] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  const dialog = useDialog();
 
   async function reload() {
     setVendors(await window.api.vendor.list());
@@ -64,7 +66,8 @@ export function VendorView() {
   }
 
   async function remove(id: number) {
-    if (!confirm('이 거래처를 삭제할까요?')) return;
+    const ok = await dialog.confirm({ message: '이 거래처를 삭제할까요?', danger: true, confirmText: '삭제' });
+    if (!ok) return;
     await window.api.vendor.remove(id);
     await reload();
   }

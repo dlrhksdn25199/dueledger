@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { Category } from '../../../shared/api';
+import { useDialog } from '../ui/dialog';
 
 export function CategoryView() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
+  const dialog = useDialog();
 
   async function reload() {
     setCategories(await window.api.category.list());
@@ -32,15 +34,19 @@ export function CategoryView() {
     // 사용 중이면 삭제 거부 — 건수를 안내 (P0 #4, 조용한 재분류 금지)
     const count = await window.api.category.countItemsUsing(c.id);
     if (count > 0) {
-      alert(`'${c.name}' 카테고리는 품목 ${count}건에서 사용 중이라 삭제할 수 없습니다.\n해당 품목을 다른 카테고리로 재지정한 뒤 삭제하세요.`);
+      await dialog.alert({
+        title: '삭제할 수 없음',
+        message: `'${c.name}' 카테고리는 품목 ${count}건에서 사용 중입니다.\n해당 품목을 다른 카테고리로 재지정한 뒤 삭제하세요.`,
+      });
       return;
     }
-    if (!confirm(`'${c.name}' 카테고리를 삭제할까요?`)) return;
+    const ok = await dialog.confirm({ message: `'${c.name}' 카테고리를 삭제할까요?`, danger: true, confirmText: '삭제' });
+    if (!ok) return;
     try {
       await window.api.category.remove(c.id);
     } catch (e) {
       // 경합 등으로 그 사이 사용 중이 됐을 때 백엔드 가드가 다시 막음
-      alert(`삭제 실패: ${(e as Error).message}`);
+      await dialog.alert({ title: '삭제 실패', message: (e as Error).message });
     }
     await reload();
   }

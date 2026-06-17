@@ -130,6 +130,14 @@ button.danger {
   color: #b91c1c;
   border-color: #f1c0c0;
 }
+button.danger-solid {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+button.danger-solid:hover {
+  background: #b91c1c;
+}
 button:disabled {
   opacity: 0.4;
   cursor: default;
@@ -262,6 +270,7 @@ table.grid.inner th {
   justify-content: center;
   padding: 40px 16px;
   overflow: auto;
+  z-index: 100; /* sticky 폼(z-index:3) 등 위로 — 모달은 항상 최상단 */
 }
 .modal {
   background: #fff;
@@ -269,6 +278,19 @@ table.grid.inner th {
   padding: 20px;
   width: min(1100px, 96vw);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+/* 확인/알림 다이얼로그(OS confirm 대체) */
+.modal.dialog {
+  width: min(420px, 92vw);
+}
+.dialog-msg {
+  margin: 4px 0 16px;
+  color: #3e4c59;
+  line-height: 1.6;
+  white-space: pre-line; /* 메시지의 줄바꿈(\n) 반영 */
+}
+.dialog-actions {
+  justify-content: flex-end;
 }
 table.items input,
 table.items select {

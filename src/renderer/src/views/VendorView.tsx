@@ -122,6 +122,7 @@ export function VendorView() {
         </div>
       </section>
 
+      <div className="table-scroll">
       <table className="grid">
         <thead>
           <tr>
@@ -164,6 +165,7 @@ export function VendorView() {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

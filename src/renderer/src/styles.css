@@ -182,15 +182,27 @@ th.num {
   display: flex;
   gap: 6px;
 }
-/* 거래처·카테고리 합본 탭 — 넓으면 2열, 좁으면 1열(반응형) */
+/* 거래처·카테고리 합본 탭 — 거래처가 컬럼이 많아 더 넓게(약 1.8:1), 카테고리는 오른쪽으로. 좁으면 1열. */
 .manage-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
+@media (max-width: 1100px) {
+  .manage-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.manage-col {
+  min-width: 0; /* 표가 컬럼을 밀어내지 않게(넘치면 셀이 줄바꿈/축소) */
+}
 .manage-col .view {
   gap: 12px;
+}
+/* 거래처 표가 컬럼보다 넓어지면 가로 스크롤(이웃 카테고리 침범 방지). sticky 폼은 형제라 영향 없음 */
+.table-scroll {
+  overflow-x: auto;
 }
 .manage-col .form-card {
   max-width: none;

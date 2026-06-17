@@ -358,6 +358,33 @@ td.overdue {
   font-size: 11px;
   color: #6b7785;
 }
+/* 클릭 가능한 날짜(결제 있는 칸) + 선택 강조 + 하단 상세 패널 */
+.cal-cell.clickable {
+  cursor: pointer;
+}
+.cal-cell.clickable:hover {
+  background: #f1f5f9;
+}
+.cal-cell.selected {
+  outline: 2px solid #15803d;
+  outline-offset: -2px;
+}
+.cal-detail {
+  margin-top: 16px;
+}
+.cal-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cal-detail-head h3 {
+  margin: 0;
+}
+.cal-detail tfoot td {
+  font-weight: 700;
+  border-top: 2px solid #e4e7eb;
+}
 
 /* 엑셀 가져오기 모달 */
 .import-modal {

@@ -6,7 +6,7 @@ import { StatusBadge } from '../status';
 
 const PAYMENT_STATUSES: PaymentStatus[] = ['미지급', '지급예정', '지급완료'];
 
-export function HomeView() {
+export function HomeView({ onOpenTransaction }: { onOpenTransaction?: (id: number) => void } = {}) {
   const [summaries, setSummaries] = useState<TransactionSummary[]>([]);
   const [recent, setRecent] = useState<TransactionSummary[]>([]);
   const today = todayISO();
@@ -71,7 +71,12 @@ export function HomeView() {
           </thead>
           <tbody>
             {attention.map((s) => (
-              <tr key={s.id} className={s.dueDate && s.dueDate < today ? 'overdue-row' : ''}>
+              <tr
+                key={s.id}
+                className={`clickable-row${s.dueDate && s.dueDate < today ? ' overdue-row' : ''}`}
+                title="명세서에서 보기"
+                onClick={() => onOpenTransaction?.(s.id)}
+              >
                 <td>{s.dueDate}</td>
                 <td>{s.dueDate ? ddayLabel(s.dueDate, today) : ''}</td>
                 <td>{s.vendorName}</td>
@@ -112,7 +117,12 @@ export function HomeView() {
           </thead>
           <tbody>
             {recent.map((s) => (
-              <tr key={s.id}>
+              <tr
+                key={s.id}
+                className="clickable-row"
+                title="명세서에서 보기"
+                onClick={() => onOpenTransaction?.(s.id)}
+              >
                 <td>{s.issueDate}</td>
                 <td>{s.vendorName}</td>
                 <td className="num">{won(s.total)}</td>

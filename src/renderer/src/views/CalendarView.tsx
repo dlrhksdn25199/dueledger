@@ -10,7 +10,7 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-export function CalendarView() {
+export function CalendarView({ onOpenTransaction }: { onOpenTransaction?: (id: number) => void } = {}) {
   const [summaries, setSummaries] = useState<TransactionSummary[]>([]);
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -141,7 +141,12 @@ export function CalendarView() {
               </thead>
               <tbody>
                 {detail.map((r) => (
-                  <tr key={r.itemId}>
+                  <tr
+                    key={r.itemId}
+                    className="clickable-row"
+                    title="명세서에서 보기"
+                    onClick={() => onOpenTransaction?.(r.transactionId)}
+                  >
                     <td>{r.vendorName}</td>
                     <td>{r.itemName}</td>
                     <td>{nullable(r.spec)}</td>

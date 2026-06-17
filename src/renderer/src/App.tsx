@@ -86,11 +86,11 @@ export function App() {
         </nav>
       </header>
       <main className="content">
-        {tab === 'home' && <HomeView />}
+        {tab === 'home' && <HomeView onOpenTransaction={openLedgerTxn} />}
         {tab === 'ledger' && (
           <LedgerView nav={ledgerNav} onNavConsumed={() => setLedgerNav(null)} />
         )}
-        {tab === 'calendar' && <CalendarView />}
+        {tab === 'calendar' && <CalendarView onOpenTransaction={openLedgerTxn} />}
         {tab === 'summary' && (
           <SummaryView onOpenTransaction={openLedgerTxn} onOpenMonth={openLedgerMonth} />
         )}

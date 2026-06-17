@@ -6,7 +6,16 @@ export function StatusBadge({ status, onClick }: { status: PaymentStatus; onClic
   const cls = status === '미지급' ? 'unpaid' : status === '지급예정' ? 'scheduled' : 'paid';
   if (onClick) {
     return (
-      <button type="button" className={`badge ${cls} badge-btn`} onClick={onClick} title="클릭하여 결제상태 변경">
+      <button
+        type="button"
+        className={`badge ${cls} badge-btn`}
+        // 행 클릭(명세서 이동 등)으로 번지지 않게 — 배지는 상태 토글만.
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+        title="클릭하여 결제상태 변경"
+      >
         {status}
       </button>
     );

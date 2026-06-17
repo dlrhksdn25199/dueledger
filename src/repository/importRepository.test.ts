@@ -7,8 +7,9 @@ import { createTransactionRepository } from './transactionRepository';
 import { createLedgerRepository } from './ledgerRepository';
 import { parseLedgerWorkbook, type ParseResult } from '../parser/excelImport';
 
+// 합성 fixture(실명·실금액 아님) — test/fixtures/build-sample.mjs 참고.
 const here = dirname(fileURLToPath(import.meta.url));
-const SAMPLE = join(here, '..', '..', 'docs', '거래명세서_공용.xlsx');
+const SAMPLE = join(here, '..', '..', 'test', 'fixtures', 'sample-ledger.xlsx');
 
 let db: DB;
 let repo: ImportRepository;
@@ -23,8 +24,8 @@ beforeEach(() => {
 describe('importRepository — preview', () => {
   it('미리보기는 쓰기 없이 신규/중복을 집계', () => {
     const s = repo.preview(parsed);
-    expect(s.newStatements).toBeGreaterThan(0);
-    expect(s.newItems).toBe(36);
+    expect(s.newStatements).toBe(3);
+    expect(s.newItems).toBe(6);
     expect(s.duplicateItems).toBe(0);
     expect(s.newCategories).toContain('원재료');
     // preview는 DB를 건드리지 않음
@@ -35,13 +36,14 @@ describe('importRepository — preview', () => {
 describe('importRepository — commit', () => {
   it('명세서·품목·신규 거래처/카테고리를 적재', () => {
     const s = repo.commit(parsed);
-    expect(s.newItems).toBe(36);
+    expect(s.newItems).toBe(6);
     const headers = (db.prepare(`SELECT COUNT(*) AS c FROM transaction_header`).get() as { c: number }).c;
     const items = (db.prepare(`SELECT COUNT(*) AS c FROM transaction_item`).get() as { c: number }).c;
     expect(headers).toBe(s.newStatements);
-    expect(items).toBe(36);
-    // 거래처/카테고리 자동 생성
+    expect(items).toBe(6);
+    // 거래처(3) 자동 생성
     expect((db.prepare(`SELECT COUNT(*) AS c FROM vendor`).get() as { c: number }).c).toBe(s.newVendors.length);
+    expect(s.newVendors).toHaveLength(3);
     expect(s.newCategories.length).toBeGreaterThan(0);
   });
 
@@ -68,6 +70,10 @@ describe('importRepository — commit', () => {
       )
       .get() as { c: number };
     expect(bad.c).toBe(0);
+    // 면세 품목이 실제로 vat 0으로 저장됐는지 확인
+    const myeonse = db.prepare(`SELECT vat FROM transaction_item WHERE tax_type = '면세'`).all() as { vat: number }[];
+    expect(myeonse.length).toBeGreaterThan(0);
+    expect(myeonse.every((r) => r.vat === 0)).toBe(true);
   });
 
   it('재임포트(같은 파일)는 전부 중복으로 건너뜀', () => {
@@ -75,18 +81,16 @@ describe('importRepository — commit', () => {
     const again = repo.commit(parsed);
     expect(again.newStatements).toBe(0);
     expect(again.newItems).toBe(0);
-    expect(again.duplicateItems).toBe(36);
+    expect(again.duplicateItems).toBe(6);
     // 데이터가 2배가 되지 않음
-    expect((db.prepare(`SELECT COUNT(*) AS c FROM transaction_item`).get() as { c: number }).c).toBe(36);
+    expect((db.prepare(`SELECT COUNT(*) AS c FROM transaction_item`).get() as { c: number }).c).toBe(6);
   });
 
   it('적재된 명세서가 원장(ledger) 조회로 보인다', () => {
     repo.commit(parsed);
     const ledger = createLedgerRepository(db);
-    const rows = ledger.list();
-    expect(rows.length).toBe(36);
-    // 명세서 단위로도 되읽기 가능
+    expect(ledger.list().length).toBe(6);
     const tx = createTransactionRepository(db);
-    expect(tx.listSummaries().length).toBeGreaterThan(0);
+    expect(tx.listSummaries().length).toBe(3);
   });
 });

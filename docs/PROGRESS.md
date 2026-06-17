@@ -5,7 +5,7 @@
 ## 현재 상태 (2026-06-17)
 **계층**: domain + repository + **parser(엑셀 임포터)** + **Electron/React UI**(홈 대시보드·달력·상태배지·결제일 수동지정·인라인 거래처/카테고리 생성·최근목록·**엑셀 가져오기**) + **패키징(electron-builder, 아이콘 포함)** 완료.
 **테스트**: 97 passing (blackbox + whitebox + 파서/임포트 실파일 검증), `tsc --noEmit` clean, `electron-vite build` 성공. 스키마 v2(결제일 수동 플래그 + updated_at) 마이그레이션 + 업그레이드/백업 테스트 포함.
-**✅ 엑셀 임포터 라이브 검증 (2026-06-17)**: 실제 회사 양식(`docs/거래명세서_공용.xlsx`)로 `cdp-import-check` **11/11 통과**(preview 무쓰기 → commit 31장/36줄 → 결제일=거래일자 → 거래처 17곳·카테고리 자동생성 → 재임포트 중복 36 건너뜀, 2배 안 됨). UI "엑셀 가져오기" 모달 렌더 확인. 회귀 `cdp-smoke` 23/23 유지.
+**✅ 엑셀 임포터 라이브 검증 (2026-06-17)**: `cdp-import-check` **11/11 통과**(preview 무쓰기 → commit → 결제일=거래일자 → 거래처·카테고리 자동생성 → 재임포트 중복 건너뜀, 2배 안 됨). UI "엑셀 가져오기" 모달 렌더 확인. 회귀 `cdp-smoke` 23/23 유지. *테스트는 합성 fixture(`test/fixtures/sample-ledger.xlsx`, 실명·실금액 없음)로 수행 — 실회사 샘플은 저장소에서 제거.*
 **✅ Windows 실기기 라이브 검증 (2026-06-17, 클린 DB)**: `npm run rebuild:electron`(Electron ABI 리빌드) 정상 → 앱 실행 → `cdp-smoke` **23/23 전부 통과**(시드·금액·부가세 0.5올림·결제일 net-30·정렬·삭제가드·홈카드·배지·달력·인라인 거래처/카테고리 생성·수동결제일·홈 최근목록). **어제 맥에서 ABI 막혀 못 했던 라운드(수동결제일·인라인생성·최근목록) 포함 전부 라이브 확인.** → 맥의 better-sqlite3 ABI 이슈는 그 머신 한정, 코드/설정 정상으로 확정.
 **맥 실기기 검증 (이전)**: A/B/E 라운드는 패키지된 앱 CDP 스모크 17/17 통과. 이후 라운드는 맥 머신 ABI 리빌드 막혀 미검증이었음(위 Windows 검증으로 해소).
 **패키징**: `electron-builder.yml` — win=포터블 .exe(미서명, `docs/dueledger-icon.ico` 아이콘), mac=dir(로컬검증). better-sqlite3 asar 언팩. CI(windows-latest)가 .exe 아티팩트 생성.

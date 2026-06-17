@@ -17,7 +17,7 @@ win:
   target:
     - portable
 portable:
-  artifactName: ${productName}-${version}-portable.${ext}
+  artifactName: ${productName}.${ext}   # 파일명 = DueLedger.exe (버전·portable 접미사 없이)
 # 로컬 검증용(맥) — 서명/공증 없이 언팩만
 mac:
   target:

@@ -267,7 +267,13 @@ export function LedgerView({ nav, onNavConsumed }: Props = {}) {
                   r.issueDate
                 )}
               </td>
-              <td>{r.vendorName}</td>
+              <td
+                className="link-cell"
+                title="클릭하여 명세서 수정"
+                onClick={() => void openEdit(r.transactionId)}
+              >
+                {r.vendorName}
+              </td>
               <td>{nullable(r.categoryName)}</td>
               <td className="num">{won(r.supplyAmount)}</td>
               <td className="num">{won(r.total)}</td>

@@ -358,6 +358,15 @@ td.overdue {
 table.grid tbody tr.row-highlight td {
   animation: rowFlash 2s ease-out;
 }
+/* 클릭하면 그 명세서 수정 폼이 열리는 셀(거래처명) */
+td.link-cell {
+  cursor: pointer;
+  color: #2563eb;
+  font-weight: 600;
+}
+td.link-cell:hover {
+  text-decoration: underline;
+}
 /* 인라인 날짜 수정 셀(클릭하면 날짜 선택기) */
 td.editable-date {
   cursor: pointer;

@@ -10,6 +10,7 @@ import type {
   VendorSummary,
   ItemSummary,
   VendorItemSummary,
+  ItemTransaction,
 } from '../repository/summaryRepository';
 import type { PaymentStatus } from '../domain/types';
 
@@ -20,6 +21,7 @@ export type {
   VendorSummary,
   ItemSummary,
   VendorItemSummary,
+  ItemTransaction,
 } from '../repository/summaryRepository';
 export type { Category } from '../repository/categoryRepository';
 export type {
@@ -75,5 +77,6 @@ export interface Api {
     byVendor(): Promise<VendorSummary[]>;
     byItem(): Promise<ItemSummary[]>;
     vendorItems(vendorId: number): Promise<VendorItemSummary[]>;
+    itemTransactions(itemName: string): Promise<ItemTransaction[]>;
   };
 }

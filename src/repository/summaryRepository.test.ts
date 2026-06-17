@@ -74,3 +74,14 @@ describe('summaryRepository.vendorItems', () => {
     expect(items[0]).toMatchObject({ itemName: '쌀', totalQty: 10, supply: 100000, total: 110000, lineCount: 1 });
   });
 });
+
+describe('summaryRepository.itemTransactions', () => {
+  it('품목별 개별 거래(언제·어디서), 거래일 순', () => {
+    const tx = summary.itemTransactions('쌀'); // A 2026-04-10, B 2026-05-05
+    expect(tx.map((t) => [t.issueDate, t.vendorName])).toEqual([
+      ['2026-04-10', 'A상사'],
+      ['2026-05-05', 'B상사'],
+    ]);
+    expect(tx[0]).toMatchObject({ quantity: 10, supply: 100000, total: 110000, paymentStatus: '미지급' });
+  });
+});

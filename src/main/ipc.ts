@@ -46,6 +46,7 @@ export function registerIpcHandlers(db: DB): void {
   ipcMain.handle('summary:byVendor', () => summary.byVendor());
   ipcMain.handle('summary:byItem', () => summary.byItem());
   ipcMain.handle('summary:vendorItems', (_e, vendorId) => summary.vendorItems(vendorId));
+  ipcMain.handle('summary:itemTransactions', (_e, itemName) => summary.itemTransactions(itemName));
 
   // 엑셀 임포트 — 파일 선택은 메인의 네이티브 대화상자, 파싱→적재는 parser+importRepository.
   ipcMain.handle('import:openDialog', (e) => {

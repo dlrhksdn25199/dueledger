@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { HomeView } from './views/HomeView';
 import { LedgerView } from './views/LedgerView';
 import { CalendarView } from './views/CalendarView';
@@ -17,6 +17,13 @@ const TABS: { key: Tab; label: string }[] = [
 
 export function App() {
   const [tab, setTab] = useState<Tab>('home');
+  const lastWheel = useRef(0);
+
+  const step = (dir: 1 | -1) =>
+    setTab((prev) => {
+      const i = TABS.findIndex((t) => t.key === prev);
+      return TABS[(i + dir + TABS.length) % TABS.length].key;
+    });
 
   // 키보드: Ctrl+1~5 = 해당 탭, Ctrl+Tab = 다음 탭(순환).
   useEffect(() => {
@@ -24,10 +31,7 @@ export function App() {
       if (!e.ctrlKey || e.altKey || e.metaKey) return;
       if (e.key === 'Tab') {
         e.preventDefault();
-        setTab((prev) => {
-          const i = TABS.findIndex((t) => t.key === prev);
-          return TABS[(i + 1) % TABS.length].key;
-        });
+        step(1);
         return;
       }
       const n = Number(e.key);
@@ -38,6 +42,20 @@ export function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Ctrl+휠: 탭 전환(기본 줌 동작 막음). 한 번 스크롤에 한 탭만(250ms 스로틀).
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastWheel.current < 250) return;
+      lastWheel.current = now;
+      step(e.deltaY > 0 ? 1 : -1);
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
   }, []);
 
   return (
@@ -52,7 +70,6 @@ export function App() {
               onClick={() => setTab(t.key)}
               title={`Ctrl+${i + 1}`}
             >
-              <span className="tab-num">{i + 1}</span>
               {t.label}
             </button>
           ))}

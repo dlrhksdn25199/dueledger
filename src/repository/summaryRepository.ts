@@ -1,5 +1,6 @@
 // 집계 조회(요약) — 읽기 전용 (P0 #5). 엑셀의 월별/거래처별/품목별 요약 시트를 대체.
 // 범위 가드(P0 #2): 고정된 집계 4종만. 임의 GROUP BY 빌더·피벗 엔진 만들지 마라.
+import type { PaymentStatus } from '../domain/types';
 import type { DB } from './db';
 
 const PAID = '지급완료'; // 지급완료 외는 미지급으로 집계
@@ -49,11 +50,24 @@ export interface VendorItemSummary {
   lineCount: number;
 }
 
+// 한 품목의 개별 거래 줄(언제·어디서). 품목별 요약 드릴다운.
+export interface ItemTransaction {
+  issueDate: string;
+  vendorName: string;
+  spec: string | null;
+  quantity: number | null;
+  unitPrice: number | null;
+  supply: number;
+  total: number;
+  paymentStatus: PaymentStatus;
+}
+
 export interface SummaryRepository {
   monthly(): MonthlySummary[];
   byVendor(): VendorSummary[];
   byItem(): ItemSummary[];
   vendorItems(vendorId: number): VendorItemSummary[];
+  itemTransactions(itemName: string): ItemTransaction[];
 }
 
 export function createSummaryRepository(db: DB): SummaryRepository {
@@ -222,6 +236,27 @@ export function createSummaryRepository(db: DB): SummaryRepository {
             lineCount: row.lineCount,
           } satisfies VendorItemSummary;
         });
+    },
+
+    // 한 품목명의 개별 거래 줄(거래일·거래처·수량·금액·상태), 거래일 오름차순.
+    itemTransactions(itemName) {
+      return db
+        .prepare(
+          `SELECT th.issue_date     AS issueDate,
+                  v.name            AS vendorName,
+                  ti.spec           AS spec,
+                  ti.quantity       AS quantity,
+                  ti.unit_price     AS unitPrice,
+                  ti.supply_amount  AS supply,
+                  ti.total          AS total,
+                  th.payment_status AS paymentStatus
+             FROM transaction_item ti
+             JOIN transaction_header th ON th.id = ti.transaction_id
+             JOIN vendor v              ON v.id = th.vendor_id
+            WHERE ti.name = ?
+            ORDER BY th.issue_date, v.name`,
+        )
+        .all(itemName) as ItemTransaction[];
     },
   };
 }

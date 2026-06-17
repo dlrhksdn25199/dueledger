@@ -41,6 +41,7 @@ const api: Api = {
     byVendor: () => ipcRenderer.invoke('summary:byVendor'),
     byItem: () => ipcRenderer.invoke('summary:byItem'),
     vendorItems: (vendorId) => ipcRenderer.invoke('summary:vendorItems', vendorId),
+    itemTransactions: (itemName) => ipcRenderer.invoke('summary:itemTransactions', itemName),
   },
 };
 

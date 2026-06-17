@@ -4,8 +4,10 @@ import type {
   VendorSummary,
   ItemSummary,
   VendorItemSummary,
+  ItemTransaction,
 } from '../../../shared/api';
 import { won, nullable } from '../format';
+import { StatusBadge } from '../status';
 
 type Sub = 'monthly' | 'vendor' | 'item';
 
@@ -232,9 +234,22 @@ function VendorTable() {
 
 function ItemTable() {
   const [rows, setRows] = useState<ItemSummary[]>([]);
+  const [openName, setOpenName] = useState<string | null>(null);
+  const [txns, setTxns] = useState<ItemTransaction[]>([]);
   useEffect(() => {
     void (async () => setRows(await window.api.summary.byItem()))();
   }, []);
+
+  async function toggle(itemName: string) {
+    if (openName === itemName) {
+      setOpenName(null);
+      setTxns([]);
+      return;
+    }
+    setOpenName(itemName);
+    setTxns(await window.api.summary.itemTransactions(itemName));
+  }
+
   return (
     <table className="grid">
       <thead>
@@ -251,16 +266,61 @@ function ItemTable() {
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={r.itemName}>
-            <td>{r.itemName}</td>
-            <td>{nullable(r.categoryName)}</td>
-            <td className="num">{r.totalQty ?? ''}</td>
-            <td className="num">{r.avgUnitPrice == null ? '' : won(r.avgUnitPrice)}</td>
-            <td className="num">{won(r.supply)}</td>
-            <td className="num">{won(r.vat)}</td>
-            <td className="num">{won(r.total)}</td>
-            <td>{nullable(r.mainVendor)}</td>
-          </tr>
+          <Fragment key={r.itemName}>
+            <tr className="clickable-row" onClick={() => void toggle(r.itemName)}>
+              <td>
+                {openName === r.itemName ? '▾ ' : '▸ '}
+                {r.itemName}
+              </td>
+              <td>{nullable(r.categoryName)}</td>
+              <td className="num">{r.totalQty ?? ''}</td>
+              <td className="num">{r.avgUnitPrice == null ? '' : won(r.avgUnitPrice)}</td>
+              <td className="num">{won(r.supply)}</td>
+              <td className="num">{won(r.vat)}</td>
+              <td className="num">{won(r.total)}</td>
+              <td>{nullable(r.mainVendor)}</td>
+            </tr>
+            {openName === r.itemName && (
+              <tr className="drill-row">
+                <td colSpan={8}>
+                  {txns.length === 0 ? (
+                    <span className="empty">거래 내역이 없습니다.</span>
+                  ) : (
+                    <table className="grid inner">
+                      <thead>
+                        <tr>
+                          <th>거래일자</th>
+                          <th>거래처</th>
+                          <th>규격</th>
+                          <th className="num">수량</th>
+                          <th className="num">단가</th>
+                          <th className="num">공급가액</th>
+                          <th className="num">합계</th>
+                          <th>결제상태</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {txns.map((t, i) => (
+                          <tr key={i}>
+                            <td>{t.issueDate}</td>
+                            <td>{t.vendorName}</td>
+                            <td>{nullable(t.spec)}</td>
+                            <td className="num">{t.quantity ?? ''}</td>
+                            <td className="num">{t.unitPrice == null ? '' : won(t.unitPrice)}</td>
+                            <td className="num">{won(t.supply)}</td>
+                            <td className="num">{won(t.total)}</td>
+                            <td>
+                              <StatusBadge status={t.paymentStatus} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </td>
+              </tr>
+            )}
+          </Fragment>
         ))}
         {rows.length === 0 && (
           <tr>

@@ -41,12 +41,6 @@ body {
   background: #3e4c59;
   color: #fff;
 }
-.tab-num {
-  display: inline-block;
-  margin-right: 6px;
-  font-size: 11px;
-  opacity: 0.55;
-}
 .content {
   flex: 1;
   overflow: auto;

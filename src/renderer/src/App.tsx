@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { HomeView } from './views/HomeView';
 import { LedgerView } from './views/LedgerView';
 import { CalendarView } from './views/CalendarView';
+import { SummaryView } from './views/SummaryView';
 import { ManageView } from './views/ManageView';
 
-type Tab = 'home' | 'ledger' | 'calendar' | 'manage';
+type Tab = 'home' | 'ledger' | 'calendar' | 'summary' | 'manage';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'home', label: '홈' },
   { key: 'ledger', label: '명세서' },
   { key: 'calendar', label: '달력' },
+  { key: 'summary', label: '요약' },
   { key: 'manage', label: '거래처·카테고리' },
 ];
 
@@ -36,6 +38,7 @@ export function App() {
         {tab === 'home' && <HomeView />}
         {tab === 'ledger' && <LedgerView />}
         {tab === 'calendar' && <CalendarView />}
+        {tab === 'summary' && <SummaryView />}
         {tab === 'manage' && <ManageView />}
       </main>
     </div>

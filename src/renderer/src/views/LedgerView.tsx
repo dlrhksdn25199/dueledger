@@ -112,9 +112,14 @@ export function LedgerView() {
   }
 
   // 인라인 날짜 저장. 발행일=재계산 가능, 결제일=직접 지정(수동 플래그 ON).
+  // ⚠️ HTML date 입력은 6자리 연도를 허용 → 4자리 YYYY-MM-DD만 통과(잘못된 연도 저장 방지).
   async function commitDate(transactionId: number, field: 'issue' | 'due', value: string) {
     setEditCell(null);
     if (!value) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      alert('날짜 형식이 올바르지 않습니다 (YYYY-MM-DD). 연도는 네 자리로 입력하세요.');
+      return;
+    }
     if (field === 'issue') await window.api.transaction.setIssueDate(transactionId, value);
     else await window.api.transaction.setDueDate(transactionId, value);
     await reload();
@@ -188,6 +193,7 @@ export function LedgerView() {
                 {editCell?.itemId === r.itemId && editCell.field === 'issue' ? (
                   <input
                     type="date"
+                    max="9999-12-31"
                     defaultValue={r.issueDate}
                     autoFocus
                     onClick={(e) => e.stopPropagation()}
@@ -219,6 +225,7 @@ export function LedgerView() {
                 {editCell?.itemId === r.itemId && editCell.field === 'due' ? (
                   <input
                     type="date"
+                    max="9999-12-31"
                     defaultValue={r.dueDate ?? ''}
                     autoFocus
                     onClick={(e) => e.stopPropagation()}

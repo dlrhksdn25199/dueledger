@@ -36,6 +36,12 @@ const api: Api = {
     commit: (filePath) => ipcRenderer.invoke('import:commit', filePath),
   },
   exportLedger: (query) => ipcRenderer.invoke('export:ledger', query),
+  summary: {
+    monthly: () => ipcRenderer.invoke('summary:monthly'),
+    byVendor: () => ipcRenderer.invoke('summary:byVendor'),
+    byItem: () => ipcRenderer.invoke('summary:byItem'),
+    vendorItems: (vendorId) => ipcRenderer.invoke('summary:vendorItems', vendorId),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

@@ -29,7 +29,13 @@ describe('vendorRepository — blackbox CRUD', () => {
       name: '가나',
       paymentTerms: { type: 'dayOfMonth', value: 25 },
     });
-    expect(updated).toEqual({ id: v.id, name: '가나', paymentTerms: { type: 'dayOfMonth', value: 25 } });
+    expect(updated).toEqual({
+      id: v.id,
+      name: '가나',
+      paymentTerms: { type: 'dayOfMonth', value: 25 },
+      phone: null,
+      accountNumber: null,
+    });
     expect(repo.getById(v.id)).toEqual(updated);
   });
 

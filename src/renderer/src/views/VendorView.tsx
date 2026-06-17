@@ -25,6 +25,8 @@ export function VendorView() {
   const [name, setName] = useState('');
   const [termsType, setTermsType] = useState<TermsType>('none');
   const [termsValue, setTermsValue] = useState('');
+  const [phone, setPhone] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
 
   async function reload() {
     setVendors(await window.api.vendor.list());
@@ -38,6 +40,8 @@ export function VendorView() {
     setName('');
     setTermsType('none');
     setTermsValue('');
+    setPhone('');
+    setAccountNumber('');
   }
 
   function startEdit(v: Vendor) {
@@ -46,11 +50,13 @@ export function VendorView() {
     const f = termsToForm(v.paymentTerms);
     setTermsType(f.type);
     setTermsValue(f.value);
+    setPhone(v.phone ?? '');
+    setAccountNumber(v.accountNumber ?? '');
   }
 
   async function save() {
     if (name.trim() === '') return;
-    const input = { name, paymentTerms: formToTerms(termsType, termsValue) };
+    const input = { name, paymentTerms: formToTerms(termsType, termsValue), phone, accountNumber };
     if (editingId === null) await window.api.vendor.create(input);
     else await window.api.vendor.update(editingId, input);
     resetForm();
@@ -65,14 +71,10 @@ export function VendorView() {
 
   return (
     <div className="view">
-      <section className="form-card">
-        <h2>{editingId === null ? '거래처 추가' : '거래처 수정'}</h2>
-        <div className="form-row">
-          <label>이름</label>
+      <section className="form-card compact sticky-form">
+        <div className="compact-row">
+          <strong className="compact-title">{editingId === null ? '거래처 추가' : '거래처 수정'}</strong>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="거래처명" />
-        </div>
-        <div className="form-row">
-          <label>결제조건</label>
           <select value={termsType} onChange={(e) => setTermsType(e.target.value as TermsType)}>
             {(Object.keys(TERMS_LABEL) as TermsType[]).map((t) => (
               <option key={t} value={t}>
@@ -86,11 +88,15 @@ export function VendorView() {
               value={termsValue}
               onChange={(e) => setTermsValue(e.target.value)}
               placeholder={termsType === 'net' ? '일수' : '일(1-31)'}
-              style={{ width: 100 }}
+              style={{ width: 90 }}
             />
           )}
-        </div>
-        <div className="form-actions">
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="전화번호" />
+          <input
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value)}
+            placeholder="계좌번호"
+          />
           <button className="primary" onClick={() => void save()}>
             {editingId === null ? '추가' : '저장'}
           </button>
@@ -103,6 +109,8 @@ export function VendorView() {
           <tr>
             <th>거래처</th>
             <th>결제조건</th>
+            <th>전화번호</th>
+            <th>계좌번호</th>
             <th></th>
           </tr>
         </thead>
@@ -117,6 +125,8 @@ export function VendorView() {
                     ? `발행일 +${v.paymentTerms.value}일`
                     : `매월 ${v.paymentTerms.value}일`}
               </td>
+              <td>{v.phone ?? ''}</td>
+              <td>{v.accountNumber ?? ''}</td>
               <td className="row-actions">
                 <button onClick={() => startEdit(v)}>수정</button>
                 <button className="danger" onClick={() => void remove(v.id)}>
@@ -127,7 +137,7 @@ export function VendorView() {
           ))}
           {vendors.length === 0 && (
             <tr>
-              <td colSpan={3} className="empty">
+              <td colSpan={5} className="empty">
                 등록된 거래처가 없습니다.
               </td>
             </tr>

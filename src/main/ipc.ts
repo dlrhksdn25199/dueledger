@@ -6,6 +6,7 @@ import { createCategoryRepository } from '../repository/categoryRepository';
 import { createTransactionRepository } from '../repository/transactionRepository';
 import { createLedgerRepository } from '../repository/ledgerRepository';
 import { createImportRepository } from '../repository/importRepository';
+import { createSummaryRepository } from '../repository/summaryRepository';
 import { parseLedgerWorkbook } from '../parser/excelImport';
 import { writeLedgerWorkbook } from '../parser/excelExport';
 
@@ -15,6 +16,7 @@ export function registerIpcHandlers(db: DB): void {
   const transactions = createTransactionRepository(db);
   const ledger = createLedgerRepository(db);
   const importer = createImportRepository(db);
+  const summary = createSummaryRepository(db);
 
   ipcMain.handle('vendor:list', () => vendors.getAll());
   ipcMain.handle('vendor:create', (_e, input) => vendors.create(input));
@@ -39,6 +41,11 @@ export function registerIpcHandlers(db: DB): void {
   ipcMain.handle('transaction:listRecent', (_e, limit) => transactions.listRecent(limit));
 
   ipcMain.handle('ledger:list', (_e, query) => ledger.list(query));
+
+  ipcMain.handle('summary:monthly', () => summary.monthly());
+  ipcMain.handle('summary:byVendor', () => summary.byVendor());
+  ipcMain.handle('summary:byItem', () => summary.byItem());
+  ipcMain.handle('summary:vendorItems', (_e, vendorId) => summary.vendorItems(vendorId));
 
   // 엑셀 임포트 — 파일 선택은 메인의 네이티브 대화상자, 파싱→적재는 parser+importRepository.
   ipcMain.handle('import:openDialog', (e) => {

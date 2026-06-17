@@ -5,10 +5,22 @@ import type { Category } from '../repository/categoryRepository';
 import type { Transaction, TransactionInput, TransactionSummary } from '../repository/transactionRepository';
 import type { LedgerRow, LedgerQuery } from '../repository/ledgerRepository';
 import type { ImportSummary } from '../repository/importRepository';
+import type {
+  MonthlySummary,
+  VendorSummary,
+  ItemSummary,
+  VendorItemSummary,
+} from '../repository/summaryRepository';
 import type { PaymentStatus } from '../domain/types';
 
 export type { Vendor, VendorInput } from '../repository/vendorRepository';
 export type { ImportSummary } from '../repository/importRepository';
+export type {
+  MonthlySummary,
+  VendorSummary,
+  ItemSummary,
+  VendorItemSummary,
+} from '../repository/summaryRepository';
 export type { Category } from '../repository/categoryRepository';
 export type {
   Transaction,
@@ -58,4 +70,10 @@ export interface Api {
   };
   // 현재 조회 결과를 .xlsx로 내보내기(저장 대화상자). 취소 시 null.
   exportLedger(query?: LedgerQuery): Promise<{ path: string; count: number } | null>;
+  summary: {
+    monthly(): Promise<MonthlySummary[]>;
+    byVendor(): Promise<VendorSummary[]>;
+    byItem(): Promise<ItemSummary[]>;
+    vendorItems(vendorId: number): Promise<VendorItemSummary[]>;
+  };
 }

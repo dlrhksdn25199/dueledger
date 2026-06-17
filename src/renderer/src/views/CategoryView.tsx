@@ -47,14 +47,15 @@ export function CategoryView() {
 
   return (
     <div className="view">
-      <section className="form-card">
-        <h2>카테고리 추가</h2>
-        <div className="form-row">
+      <section className="form-card compact sticky-form">
+        <div className="compact-row">
+          <strong className="compact-title">카테고리 추가</strong>
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="카테고리명"
             onKeyDown={(e) => e.key === 'Enter' && void add()}
+            style={{ flex: 1 }}
           />
           <button className="primary" onClick={() => void add()}>
             추가

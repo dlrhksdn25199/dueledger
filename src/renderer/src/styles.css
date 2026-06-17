@@ -237,6 +237,15 @@ td.overdue {
   color: #c0392b;
   font-weight: 700;
 }
+/* 인라인 날짜 수정 셀(클릭하면 날짜 선택기) */
+td.editable-date {
+  cursor: pointer;
+}
+td.editable-date:hover {
+  background: #f1f5f9;
+  outline: 1px dashed #94a3b8;
+  outline-offset: -1px;
+}
 .overdue-row {
   background: #fdf2f2;
 }

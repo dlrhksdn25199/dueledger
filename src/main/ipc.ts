@@ -7,6 +7,7 @@ import { createTransactionRepository } from '../repository/transactionRepository
 import { createLedgerRepository } from '../repository/ledgerRepository';
 import { createImportRepository } from '../repository/importRepository';
 import { parseLedgerWorkbook } from '../parser/excelImport';
+import { writeLedgerWorkbook } from '../parser/excelExport';
 
 export function registerIpcHandlers(db: DB): void {
   const vendors = createVendorRepository(db);
@@ -31,6 +32,8 @@ export function registerIpcHandlers(db: DB): void {
   ipcMain.handle('transaction:create', (_e, input) => transactions.create(input));
   ipcMain.handle('transaction:update', (_e, id, input) => transactions.update(id, input));
   ipcMain.handle('transaction:setPaymentStatus', (_e, id, status) => transactions.setPaymentStatus(id, status));
+  ipcMain.handle('transaction:setIssueDate', (_e, id, date) => transactions.setIssueDate(id, date));
+  ipcMain.handle('transaction:setDueDate', (_e, id, date) => transactions.setDueDate(id, date));
   ipcMain.handle('transaction:remove', (_e, id) => transactions.remove(id));
   ipcMain.handle('transaction:listSummaries', () => transactions.listSummaries());
   ipcMain.handle('transaction:listRecent', (_e, limit) => transactions.listRecent(limit));
@@ -49,4 +52,18 @@ export function registerIpcHandlers(db: DB): void {
   });
   ipcMain.handle('import:preview', (_e, filePath: string) => importer.preview(parseLedgerWorkbook(filePath)));
   ipcMain.handle('import:commit', (_e, filePath: string) => importer.commit(parseLedgerWorkbook(filePath)));
+
+  // 엑셀 내보내기(외부 공유) — 현재 조회 결과를 저장 대화상자로 .xlsx 저장.
+  ipcMain.handle('export:ledger', (e, query) => {
+    const rows = ledger.list(query);
+    const win = BrowserWindow.fromWebContents(e.sender) ?? undefined;
+    const filePath = dialog.showSaveDialogSync(win!, {
+      title: '엑셀로 내보내기',
+      defaultPath: 'DueLedger-거래명세.xlsx',
+      filters: [{ name: '엑셀 파일', extensions: ['xlsx'] }],
+    });
+    if (!filePath) return null; // 취소
+    writeLedgerWorkbook(filePath, rows);
+    return { path: filePath, count: rows.length };
+  });
 }

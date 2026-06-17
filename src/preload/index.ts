@@ -21,6 +21,8 @@ const api: Api = {
     create: (input) => ipcRenderer.invoke('transaction:create', input),
     update: (id, input) => ipcRenderer.invoke('transaction:update', id, input),
     setPaymentStatus: (id, status) => ipcRenderer.invoke('transaction:setPaymentStatus', id, status),
+    setIssueDate: (id, date) => ipcRenderer.invoke('transaction:setIssueDate', id, date),
+    setDueDate: (id, date) => ipcRenderer.invoke('transaction:setDueDate', id, date),
     remove: (id) => ipcRenderer.invoke('transaction:remove', id),
     listSummaries: () => ipcRenderer.invoke('transaction:listSummaries'),
     listRecent: (limit) => ipcRenderer.invoke('transaction:listRecent', limit),
@@ -33,6 +35,7 @@ const api: Api = {
     preview: (filePath) => ipcRenderer.invoke('import:preview', filePath),
     commit: (filePath) => ipcRenderer.invoke('import:commit', filePath),
   },
+  exportLedger: (query) => ipcRenderer.invoke('export:ledger', query),
 };
 
 contextBridge.exposeInMainWorld('api', api);

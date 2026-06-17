@@ -110,11 +110,6 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
     setShowCatAdd(false);
   }
 
-  function toggleManualDue(on: boolean) {
-    setManualDue(on);
-    if (on && manualDueDate === '') setManualDueDate(autoDue ?? issueDate);
-  }
-
   function preview(it: ItemForm): { vat: number; total: number } {
     const supply = toNumberOrNull(it.supplyAmount) ?? 0;
     const vat = computeVat(supply, it.taxType);
@@ -209,17 +204,32 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
 
         <div className="form-row">
           <label>결제일</label>
-          <label className="checkbox">
-            <input type="checkbox" checked={manualDue} onChange={(e) => toggleManualDue(e.target.checked)} /> 직접
-            지정
-          </label>
-          {manualDue ? (
-            <input type="date" value={manualDueDate} onChange={(e) => setManualDueDate(e.target.value)} />
-          ) : (
-            <span className="auto-due">
-              자동: {autoDue ?? '거래처 결제조건이 없어 계산 안 됨'}
-            </span>
+          <input
+            type="date"
+            value={manualDue ? manualDueDate : autoDue ?? ''}
+            onChange={(e) => {
+              setManualDue(true);
+              setManualDueDate(e.target.value);
+            }}
+          />
+          {selectedVendor?.paymentTerms && (
+            <button
+              type="button"
+              onClick={() => {
+                setManualDue(false);
+                setManualDueDate('');
+              }}
+            >
+              자동계산
+            </button>
           )}
+          <span className="auto-due">
+            {manualDue
+              ? '직접 지정됨'
+              : autoDue
+                ? '거래처 결제조건으로 자동'
+                : '거래처 결제조건 없음 — 날짜를 직접 입력하세요'}
+          </span>
         </div>
 
         <div className="form-row">

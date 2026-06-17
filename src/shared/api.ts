@@ -39,6 +39,8 @@ export interface Api {
     create(input: TransactionInput): Promise<Transaction>;
     update(id: number, input: TransactionInput): Promise<Transaction>;
     setPaymentStatus(id: number, status: PaymentStatus): Promise<void>;
+    setIssueDate(id: number, date: string): Promise<void>;
+    setDueDate(id: number, date: string): Promise<void>;
     remove(id: number): Promise<void>;
     listSummaries(): Promise<TransactionSummary[]>;
     listRecent(limit: number): Promise<TransactionSummary[]>;
@@ -54,4 +56,6 @@ export interface Api {
     // 한 트랜잭션으로 적재.
     commit(filePath: string): Promise<ImportSummary>;
   };
+  // 현재 조회 결과를 .xlsx로 내보내기(저장 대화상자). 취소 시 null.
+  exportLedger(query?: LedgerQuery): Promise<{ path: string; count: number } | null>;
 }

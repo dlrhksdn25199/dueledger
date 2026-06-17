@@ -1,20 +1,30 @@
-import { useEffect, useState } from 'react';
-import type { TransactionSummary } from '../../../shared/api';
+import { useCallback, useEffect, useState } from 'react';
+import type { PaymentStatus, TransactionSummary } from '../../../shared/api';
 import { classifyPayments } from '../../../domain/paymentSchedule';
 import { won, todayISO, ddayLabel } from '../format';
 import { StatusBadge } from '../status';
+
+const PAYMENT_STATUSES: PaymentStatus[] = ['미지급', '지급예정', '지급완료'];
 
 export function HomeView() {
   const [summaries, setSummaries] = useState<TransactionSummary[]>([]);
   const [recent, setRecent] = useState<TransactionSummary[]>([]);
   const today = todayISO();
 
-  useEffect(() => {
-    void (async () => {
-      setSummaries(await window.api.transaction.listSummaries());
-      setRecent(await window.api.transaction.listRecent(5));
-    })();
+  const reload = useCallback(async () => {
+    setSummaries(await window.api.transaction.listSummaries());
+    setRecent(await window.api.transaction.listRecent(5));
   }, []);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  // 결제상태 배지 클릭 → 다음 상태로 순환 후 저장(목록과 동일).
+  async function cyclePaymentStatus(transactionId: number, current: PaymentStatus) {
+    const next = PAYMENT_STATUSES[(PAYMENT_STATUSES.indexOf(current) + 1) % PAYMENT_STATUSES.length];
+    await window.api.transaction.setPaymentStatus(transactionId, next);
+    await reload();
+  }
 
   const c = classifyPayments(summaries, today);
   // 챙겨야 할 것 = 연체 + 임박, 결제일 빠른 순
@@ -67,7 +77,10 @@ export function HomeView() {
                 <td>{s.vendorName}</td>
                 <td className="num">{won(s.total)}</td>
                 <td>
-                  <StatusBadge status={s.paymentStatus} />
+                  <StatusBadge
+                    status={s.paymentStatus}
+                    onClick={() => void cyclePaymentStatus(s.id, s.paymentStatus)}
+                  />
                 </td>
               </tr>
             ))}
@@ -105,7 +118,10 @@ export function HomeView() {
                 <td className="num">{won(s.total)}</td>
                 <td>{s.dueDate ?? '—'}</td>
                 <td>
-                  <StatusBadge status={s.paymentStatus} />
+                  <StatusBadge
+                    status={s.paymentStatus}
+                    onClick={() => void cyclePaymentStatus(s.id, s.paymentStatus)}
+                  />
                 </td>
               </tr>
             ))}

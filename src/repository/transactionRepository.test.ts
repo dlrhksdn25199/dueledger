@@ -240,6 +240,56 @@ describe('transactionRepository.setPaymentStatus', () => {
   });
 });
 
+describe('transactionRepository.setIssueDate / setDueDate', () => {
+  it('미수동지정: 발행일 변경 시 결제일을 거래처 조건으로 재계산', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms, // net-30
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+    });
+    expect(t.dueDate).toBe('2026-07-16');
+    repo.setIssueDate(t.id, '2026-06-20');
+    const after = repo.getById(t.id)!;
+    expect(after.issueDate).toBe('2026-06-20');
+    expect(after.dueDate).toBe('2026-07-20'); // 재계산됨
+  });
+
+  it('수동지정 상태면 발행일만 바뀌고 결제일은 유지', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+      dueDateOverridden: true,
+      dueDate: '2026-08-01',
+    });
+    repo.setIssueDate(t.id, '2026-06-20');
+    const after = repo.getById(t.id)!;
+    expect(after.issueDate).toBe('2026-06-20');
+    expect(after.dueDate).toBe('2026-08-01'); // 유지
+  });
+
+  it('setDueDate는 결제일을 직접 지정하고 수동 플래그를 켠다', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+    });
+    repo.setDueDate(t.id, '2026-09-09');
+    const after = repo.getById(t.id)!;
+    expect(after.dueDate).toBe('2026-09-09');
+    expect(after.dueDateOverridden).toBe(true);
+    // 이후 발행일을 바꿔도 결제일 유지
+    repo.setIssueDate(t.id, '2026-06-01');
+    expect(repo.getById(t.id)!.dueDate).toBe('2026-09-09');
+  });
+});
+
 describe('transactionRepository.listRecent', () => {
   it('최근 생성 순(newest first) + limit', () => {
     const mk = (memo: string) =>

@@ -103,6 +103,8 @@ export interface TransactionRepository {
   getById(id: number): Transaction | null;
   update(id: number, input: TransactionInput): Transaction;
   setPaymentStatus(id: number, status: PaymentStatus): void; // 결제상태만 빠르게 변경(목록에서 토글)
+  setIssueDate(id: number, issueDate: string): void; // 발행일만 변경(미수동지정이면 결제일 재계산)
+  setDueDate(id: number, dueDate: string): void; // 결제일 직접 지정(수동 플래그 ON)
   remove(id: number): void;
   listSummaries(): TransactionSummary[];
   listRecent(limit: number): TransactionSummary[];
@@ -229,6 +231,35 @@ export function createTransactionRepository(db: DB): TransactionRepository {
       const info = db
         .prepare(`UPDATE transaction_header SET payment_status = ?, updated_at = ? WHERE id = ?`)
         .run(status, now, id);
+      if (info.changes === 0) throw new Error(`Transaction not found: ${id}`);
+    },
+
+    // 발행일만 변경(목록 인라인 편집). 결제일 수동지정이면 결제일 유지, 아니면 거래처 조건으로 재계산.
+    setIssueDate(id, issueDate) {
+      const now = new Date().toISOString();
+      const header = db
+        .prepare(`SELECT vendor_id AS vendorId, due_date_overridden AS overridden FROM transaction_header WHERE id = ?`)
+        .get(id) as { vendorId: number; overridden: number } | undefined;
+      if (!header) throw new Error(`Transaction not found: ${id}`);
+      if (header.overridden === 1) {
+        db.prepare(`UPDATE transaction_header SET issue_date = ?, updated_at = ? WHERE id = ?`).run(issueDate, now, id);
+      } else {
+        const dueDate = computeDue(header.vendorId, issueDate);
+        db.prepare(`UPDATE transaction_header SET issue_date = ?, due_date = ?, updated_at = ? WHERE id = ?`).run(
+          issueDate,
+          dueDate,
+          now,
+          id,
+        );
+      }
+    },
+
+    // 결제일 직접 지정(목록 인라인 편집) → 수동 플래그 ON(이후 발행일 바꿔도 유지).
+    setDueDate(id, dueDate) {
+      const now = new Date().toISOString();
+      const info = db
+        .prepare(`UPDATE transaction_header SET due_date = ?, due_date_overridden = 1, updated_at = ? WHERE id = ?`)
+        .run(dueDate, now, id);
       if (info.changes === 0) throw new Error(`Transaction not found: ${id}`);
     },
 

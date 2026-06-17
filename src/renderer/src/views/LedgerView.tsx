@@ -44,9 +44,11 @@ export function LedgerView() {
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  // 인라인 날짜 편집 중인 셀(itemId+필드). 편집은 그 명세서(transactionId) 전체에 적용.
+  const [editCell, setEditCell] = useState<{ itemId: number; field: 'issue' | 'due' } | null>(null);
   const today = todayISO();
 
-  const reload = useCallback(async () => {
+  const buildQuery = useCallback((): LedgerQuery => {
     const query: LedgerQuery = { sort };
     const filter: LedgerQuery['filter'] = {};
     if (vendorId !== '') filter.vendorId = Number(vendorId);
@@ -54,8 +56,12 @@ export function LedgerView() {
     if (month !== '') filter.month = month;
     if (Object.keys(filter).length) query.filter = filter;
     if (search.trim() !== '') query.search = search;
-    setRows(await window.api.ledger.list(query));
+    return query;
   }, [vendorId, status, month, search, sort]);
+
+  const reload = useCallback(async () => {
+    setRows(await window.api.ledger.list(buildQuery()));
+  }, [buildQuery]);
 
   const loadLists = useCallback(async () => {
     setVendors(await window.api.vendor.list());
@@ -105,6 +111,21 @@ export function LedgerView() {
     await reload();
   }
 
+  // 인라인 날짜 저장. 발행일=재계산 가능, 결제일=직접 지정(수동 플래그 ON).
+  async function commitDate(transactionId: number, field: 'issue' | 'due', value: string) {
+    setEditCell(null);
+    if (!value) return;
+    if (field === 'issue') await window.api.transaction.setIssueDate(transactionId, value);
+    else await window.api.transaction.setDueDate(transactionId, value);
+    await reload();
+  }
+
+  // 현재 조회 결과(필터·검색·정렬 반영)를 엑셀로 내보내기.
+  async function exportExcel() {
+    const res = await window.api.exportLedger(buildQuery());
+    if (res) alert(`엑셀로 내보냈습니다.\n${res.count}줄 → ${res.path}`);
+  }
+
   return (
     <div className="view">
       <section className="toolbar">
@@ -132,6 +153,7 @@ export function LedgerView() {
         />
         <span className="spacer" />
         <button onClick={() => setImportOpen(true)}>엑셀 가져오기</button>
+        <button onClick={() => void exportExcel()}>엑셀 내보내기</button>
         <button className="primary" onClick={openNew}>
           + 새 명세서
         </button>
@@ -157,7 +179,27 @@ export function LedgerView() {
         <tbody>
           {rows.map((r) => (
             <tr key={r.itemId}>
-              <td>{r.issueDate}</td>
+              <td
+                className="editable-date"
+                title="클릭하여 발행일 수정"
+                onClick={() => setEditCell({ itemId: r.itemId, field: 'issue' })}
+              >
+                {editCell?.itemId === r.itemId && editCell.field === 'issue' ? (
+                  <input
+                    type="date"
+                    defaultValue={r.issueDate}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onBlur={(e) => void commitDate(r.transactionId, 'issue', e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      if (e.key === 'Escape') setEditCell(null);
+                    }}
+                  />
+                ) : (
+                  r.issueDate
+                )}
+              </td>
               <td>{r.vendorName}</td>
               <td>{nullable(r.categoryName)}</td>
               <td className="num">{won(r.supplyAmount)}</td>
@@ -168,8 +210,26 @@ export function LedgerView() {
                   onClick={() => void cyclePaymentStatus(r.transactionId, r.paymentStatus)}
                 />
               </td>
-              <td className={isOverdue(r.dueDate, r.paymentStatus, today) ? 'overdue' : ''}>
-                {nullable(r.dueDate)}
+              <td
+                className={`editable-date${isOverdue(r.dueDate, r.paymentStatus, today) ? ' overdue' : ''}`}
+                title="클릭하여 결제일 수정"
+                onClick={() => setEditCell({ itemId: r.itemId, field: 'due' })}
+              >
+                {editCell?.itemId === r.itemId && editCell.field === 'due' ? (
+                  <input
+                    type="date"
+                    defaultValue={r.dueDate ?? ''}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onBlur={(e) => void commitDate(r.transactionId, 'due', e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      if (e.key === 'Escape') setEditCell(null);
+                    }}
+                  />
+                ) : (
+                  nullable(r.dueDate)
+                )}
               </td>
               <td>{r.itemName}</td>
               <td>{nullable(r.spec)}</td>

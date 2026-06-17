@@ -35,6 +35,8 @@ describe('vendorRepository — blackbox CRUD', () => {
       paymentTerms: { type: 'dayOfMonth', value: 25 },
       phone: null,
       accountNumber: null,
+      contactName: null,
+      contactTitle: null,
     });
     expect(repo.getById(v.id)).toEqual(updated);
   });
@@ -72,5 +74,26 @@ describe('vendorRepository — whitebox', () => {
 
   it('없는 id update → throw', () => {
     expect(() => repo.update(999, { name: 'x', paymentTerms: null })).toThrow();
+  });
+
+  it('연락처/담당자(전화·계좌·담당자명·직급) 라운드트립 + 빈칸은 null', () => {
+    const v = repo.create({
+      name: '연락처상사',
+      paymentTerms: null,
+      phone: '010-1234-5678',
+      accountNumber: '123-456',
+      contactName: '홍길동',
+      contactTitle: '과장',
+    });
+    expect(repo.getById(v.id)).toMatchObject({
+      phone: '010-1234-5678',
+      accountNumber: '123-456',
+      contactName: '홍길동',
+      contactTitle: '과장',
+    });
+    // 빈 문자열 → null 정규화
+    const u = repo.update(v.id, { name: '연락처상사', paymentTerms: null, contactName: '  ', phone: '' });
+    expect(u.contactName).toBeNull();
+    expect(u.phone).toBeNull();
   });
 });

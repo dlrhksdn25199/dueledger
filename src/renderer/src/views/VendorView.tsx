@@ -28,6 +28,8 @@ export function VendorView() {
   const [termsValue, setTermsValue] = useState('');
   const [phone, setPhone] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [contactTitle, setContactTitle] = useState('');
   const dialog = useDialog();
 
   async function reload() {
@@ -44,6 +46,8 @@ export function VendorView() {
     setTermsValue('');
     setPhone('');
     setAccountNumber('');
+    setContactName('');
+    setContactTitle('');
   }
 
   function startEdit(v: Vendor) {
@@ -54,11 +58,20 @@ export function VendorView() {
     setTermsValue(f.value);
     setPhone(v.phone ?? '');
     setAccountNumber(v.accountNumber ?? '');
+    setContactName(v.contactName ?? '');
+    setContactTitle(v.contactTitle ?? '');
   }
 
   async function save() {
     if (name.trim() === '') return;
-    const input = { name, paymentTerms: formToTerms(termsType, termsValue), phone, accountNumber };
+    const input = {
+      name,
+      paymentTerms: formToTerms(termsType, termsValue),
+      phone,
+      accountNumber,
+      contactName,
+      contactTitle,
+    };
     if (editingId === null) await window.api.vendor.create(input);
     else await window.api.vendor.update(editingId, input);
     resetForm();
@@ -100,6 +113,8 @@ export function VendorView() {
             onChange={(e) => setAccountNumber(e.target.value)}
             placeholder="계좌번호"
           />
+          <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="담당자명" />
+          <input value={contactTitle} onChange={(e) => setContactTitle(e.target.value)} placeholder="직급" />
           <button className="primary" onClick={() => void save()}>
             {editingId === null ? '추가' : '저장'}
           </button>
@@ -112,6 +127,7 @@ export function VendorView() {
           <tr>
             <th>거래처</th>
             <th>결제조건</th>
+            <th>담당자</th>
             <th>전화번호</th>
             <th>계좌번호</th>
             <th></th>
@@ -128,6 +144,7 @@ export function VendorView() {
                     ? `발행일 +${v.paymentTerms.value}일`
                     : `매월 ${v.paymentTerms.value}일`}
               </td>
+              <td>{[v.contactName, v.contactTitle].filter(Boolean).join(' ')}</td>
               <td>{v.phone ?? ''}</td>
               <td>{v.accountNumber ?? ''}</td>
               <td className="row-actions">
@@ -140,7 +157,7 @@ export function VendorView() {
           ))}
           {vendors.length === 0 && (
             <tr>
-              <td colSpan={5} className="empty">
+              <td colSpan={6} className="empty">
                 등록된 거래처가 없습니다.
               </td>
             </tr>

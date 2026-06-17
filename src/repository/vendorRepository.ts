@@ -7,6 +7,8 @@ export interface VendorInput {
   paymentTerms: PaymentTerms | null;
   phone?: string | null; // 전화번호 (자유 입력, 선택)
   accountNumber?: string | null; // 계좌번호 (자유 입력, 선택)
+  contactName?: string | null; // 담당자명 (선택)
+  contactTitle?: string | null; // 직급 (선택)
 }
 
 export interface Vendor {
@@ -15,6 +17,8 @@ export interface Vendor {
   paymentTerms: PaymentTerms | null;
   phone: string | null;
   accountNumber: string | null;
+  contactName: string | null;
+  contactTitle: string | null;
 }
 
 interface VendorRow {
@@ -24,6 +28,8 @@ interface VendorRow {
   payment_terms_value: number | null;
   phone: string | null;
   account_number: string | null;
+  contact_name: string | null;
+  contact_title: string | null;
 }
 
 function rowToVendor(row: VendorRow): Vendor {
@@ -37,6 +43,8 @@ function rowToVendor(row: VendorRow): Vendor {
     paymentTerms,
     phone: row.phone,
     accountNumber: row.account_number,
+    contactName: row.contact_name,
+    contactTitle: row.contact_title,
   };
 }
 
@@ -62,13 +70,23 @@ export function createVendorRepository(db: DB): VendorRepository {
       const t = input.paymentTerms;
       const phone = nullIfBlank(input.phone ?? null);
       const accountNumber = nullIfBlank(input.accountNumber ?? null);
+      const contactName = nullIfBlank(input.contactName ?? null);
+      const contactTitle = nullIfBlank(input.contactTitle ?? null);
       const info = db
         .prepare(
-          `INSERT INTO vendor (name, payment_terms_type, payment_terms_value, phone, account_number)
-           VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO vendor (name, payment_terms_type, payment_terms_value, phone, account_number, contact_name, contact_title)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(name, t?.type ?? null, t?.value ?? null, phone, accountNumber);
-      return { id: Number(info.lastInsertRowid), name, paymentTerms: t, phone, accountNumber };
+        .run(name, t?.type ?? null, t?.value ?? null, phone, accountNumber, contactName, contactTitle);
+      return {
+        id: Number(info.lastInsertRowid),
+        name,
+        paymentTerms: t,
+        phone,
+        accountNumber,
+        contactName,
+        contactTitle,
+      };
     },
 
     getAll() {
@@ -90,15 +108,18 @@ export function createVendorRepository(db: DB): VendorRepository {
       const t = input.paymentTerms;
       const phone = nullIfBlank(input.phone ?? null);
       const accountNumber = nullIfBlank(input.accountNumber ?? null);
+      const contactName = nullIfBlank(input.contactName ?? null);
+      const contactTitle = nullIfBlank(input.contactTitle ?? null);
       const info = db
         .prepare(
           `UPDATE vendor
-             SET name = ?, payment_terms_type = ?, payment_terms_value = ?, phone = ?, account_number = ?
+             SET name = ?, payment_terms_type = ?, payment_terms_value = ?, phone = ?, account_number = ?,
+                 contact_name = ?, contact_title = ?
            WHERE id = ?`,
         )
-        .run(name, t?.type ?? null, t?.value ?? null, phone, accountNumber, id);
+        .run(name, t?.type ?? null, t?.value ?? null, phone, accountNumber, contactName, contactTitle, id);
       if (info.changes === 0) throw new Error(`Vendor not found: ${id}`);
-      return { id, name, paymentTerms: t, phone, accountNumber };
+      return { id, name, paymentTerms: t, phone, accountNumber, contactName, contactTitle };
     },
 
     remove(id) {

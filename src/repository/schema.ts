@@ -79,7 +79,18 @@ const v3: Migration = {
   },
 };
 
-export const MIGRATIONS: readonly Migration[] = [v1, v2, v3];
+// v4: 거래처 담당자 정보(담당자명·직급) 추가 (가산적, P0 #6). 둘 다 nullable 자유 입력.
+const v4: Migration = {
+  version: 4,
+  up: (db) => {
+    db.exec(`
+      ALTER TABLE vendor ADD COLUMN contact_name TEXT;
+      ALTER TABLE vendor ADD COLUMN contact_title TEXT;
+    `);
+  },
+};
+
+export const MIGRATIONS: readonly Migration[] = [v1, v2, v3, v4];
 
 // 최신 스키마 버전 = 마이그레이션 중 가장 큰 version
 export const LATEST_VERSION = MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0);

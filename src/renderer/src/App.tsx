@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { HomeView } from './views/HomeView';
 import { LedgerView } from './views/LedgerView';
 import { CalendarView } from './views/CalendarView';
@@ -18,17 +18,41 @@ const TABS: { key: Tab; label: string }[] = [
 export function App() {
   const [tab, setTab] = useState<Tab>('home');
 
+  // 키보드: Ctrl+1~5 = 해당 탭, Ctrl+Tab = 다음 탭(순환).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.altKey || e.metaKey) return;
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        setTab((prev) => {
+          const i = TABS.findIndex((t) => t.key === prev);
+          return TABS[(i + 1) % TABS.length].key;
+        });
+        return;
+      }
+      const n = Number(e.key);
+      if (Number.isInteger(n) && n >= 1 && n <= TABS.length) {
+        e.preventDefault();
+        setTab(TABS[n - 1].key);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div className="app">
       <header className="topbar">
         <h1>DueLedger</h1>
         <nav className="tabs">
-          {TABS.map((t) => (
+          {TABS.map((t, i) => (
             <button
               key={t.key}
               className={tab === t.key ? 'tab active' : 'tab'}
               onClick={() => setTab(t.key)}
+              title={`Ctrl+${i + 1}`}
             >
+              <span className="tab-num">{i + 1}</span>
               {t.label}
             </button>
           ))}

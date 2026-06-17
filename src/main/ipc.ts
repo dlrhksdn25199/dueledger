@@ -61,12 +61,12 @@ export function registerIpcHandlers(db: DB): void {
   ipcMain.handle('import:commit', (_e, filePath: string) => importer.commit(parseLedgerWorkbook(filePath)));
 
   // 엑셀 내보내기(외부 공유) — 현재 조회 결과를 저장 대화상자로 .xlsx 저장.
-  ipcMain.handle('export:ledger', (e, query) => {
+  ipcMain.handle('export:ledger', (e, query, defaultName?: string) => {
     const rows = ledger.list(query);
     const win = BrowserWindow.fromWebContents(e.sender) ?? undefined;
     const filePath = dialog.showSaveDialogSync(win!, {
       title: '엑셀로 내보내기',
-      defaultPath: 'DueLedger-거래명세.xlsx',
+      defaultPath: defaultName && defaultName.trim() !== '' ? defaultName : 'DueLedger-거래명세.xlsx',
       filters: [{ name: '엑셀 파일', extensions: ['xlsx'] }],
     });
     if (!filePath) return null; // 취소

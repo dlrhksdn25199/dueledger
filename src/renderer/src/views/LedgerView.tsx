@@ -111,6 +111,17 @@ export function LedgerView() {
     await reload();
   }
 
+  // 인라인 날짜 입력이 뜨면 달력 picker를 바로 연다(클릭 한 번에 달력까지).
+  function openPicker(el: HTMLInputElement | null) {
+    if (!el) return;
+    el.focus();
+    try {
+      el.showPicker(); // 셀 클릭(사용자 제스처) 직후라 허용됨
+    } catch {
+      /* 일부 환경에서 user-activation 필요 — 실패해도 입력 자체는 동작 */
+    }
+  }
+
   // 인라인 날짜 저장. 발행일=재계산 가능, 결제일=직접 지정(수동 플래그 ON).
   // ⚠️ HTML date 입력은 6자리 연도를 허용 → 4자리 YYYY-MM-DD만 통과(잘못된 연도 저장 방지).
   async function commitDate(transactionId: number, field: 'issue' | 'due', value: string) {
@@ -125,9 +136,12 @@ export function LedgerView() {
     await reload();
   }
 
-  // 현재 조회 결과(필터·검색·정렬 반영)를 엑셀로 내보내기.
+  // 현재 조회 결과(필터·검색·정렬 반영)를 엑셀로 내보내기. 파일명에 거래처 필터 반영.
   async function exportExcel() {
-    const res = await window.api.exportLedger(buildQuery());
+    const vendorLabel =
+      vendorId === '' ? '전체거래처' : (vendors.find((v) => v.id === Number(vendorId))?.name ?? '거래처');
+    const defaultName = `${vendorLabel} 명세서_DueLedger.xlsx`;
+    const res = await window.api.exportLedger(buildQuery(), defaultName);
     if (res) alert(`엑셀로 내보냈습니다.\n${res.count}줄 → ${res.path}`);
   }
 
@@ -195,7 +209,7 @@ export function LedgerView() {
                     type="date"
                     max="9999-12-31"
                     defaultValue={r.issueDate}
-                    autoFocus
+                    ref={openPicker}
                     onClick={(e) => e.stopPropagation()}
                     onBlur={(e) => void commitDate(r.transactionId, 'issue', e.target.value)}
                     onKeyDown={(e) => {
@@ -227,7 +241,7 @@ export function LedgerView() {
                     type="date"
                     max="9999-12-31"
                     defaultValue={r.dueDate ?? ''}
-                    autoFocus
+                    ref={openPicker}
                     onClick={(e) => e.stopPropagation()}
                     onBlur={(e) => void commitDate(r.transactionId, 'due', e.target.value)}
                     onKeyDown={(e) => {

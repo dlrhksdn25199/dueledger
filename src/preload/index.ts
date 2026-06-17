@@ -35,7 +35,7 @@ const api: Api = {
     preview: (filePath) => ipcRenderer.invoke('import:preview', filePath),
     commit: (filePath) => ipcRenderer.invoke('import:commit', filePath),
   },
-  exportLedger: (query) => ipcRenderer.invoke('export:ledger', query),
+  exportLedger: (query, defaultName) => ipcRenderer.invoke('export:ledger', query, defaultName),
   summary: {
     monthly: () => ipcRenderer.invoke('summary:monthly'),
     byVendor: () => ipcRenderer.invoke('summary:byVendor'),

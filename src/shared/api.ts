@@ -68,8 +68,8 @@ export interface Api {
     // 한 트랜잭션으로 적재.
     commit(filePath: string): Promise<ImportSummary>;
   };
-  // 현재 조회 결과를 .xlsx로 내보내기(저장 대화상자). 취소 시 null.
-  exportLedger(query?: LedgerQuery): Promise<{ path: string; count: number } | null>;
+  // 현재 조회 결과를 .xlsx로 내보내기(저장 대화상자). defaultName=기본 파일명. 취소 시 null.
+  exportLedger(query?: LedgerQuery, defaultName?: string): Promise<{ path: string; count: number } | null>;
   summary: {
     monthly(): Promise<MonthlySummary[]>;
     byVendor(): Promise<VendorSummary[]>;

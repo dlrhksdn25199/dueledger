@@ -6,12 +6,14 @@ directories:
 files:
   - out/**
   - package.json
+  - build/icon.ico   # 런타임 창/작업표시줄 아이콘 (BrowserWindow icon이 asar에서 읽음)
 # better-sqlite3는 네이티브(.node)라 asar 안에서 로드 불가 → 언팩 (P0 #5 데이터 게이트가 실제 동작하려면 필수)
 asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 # 단일 사용자 포터블 .exe (설치 마법사 없음, 더블클릭). 미서명 → 첫 실행 시 윈도우 경고 1회.
+# 아이콘 = build/icon.ico (buildResources 관례 — .exe 파일 아이콘으로 자동 임베드).
 win:
-  icon: docs/dueledger-icon.ico
+  icon: build/icon.ico
   target:
     - portable
 portable:

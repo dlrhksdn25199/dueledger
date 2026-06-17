@@ -27,10 +27,17 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
   { key: 'dueDate', label: '결제일' },
 ];
 
-export function LedgerView() {
+interface Props {
+  // 다른 화면(요약 등)에서 넘어온 하이라이트 대상 명세서. 진입 시 필터 해제 + 그 행 강조.
+  highlightTransactionId?: number | null;
+  onHighlightConsumed?: () => void;
+}
+
+export function LedgerView({ highlightTransactionId, onHighlightConsumed }: Props = {}) {
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [highlightId, setHighlightId] = useState<number | null>(null);
 
   const [vendorId, setVendorId] = useState('');
   const [status, setStatus] = useState('');
@@ -73,6 +80,26 @@ export function LedgerView() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // 외부에서 하이라이트 대상이 들어오면: 필터 해제(대상이 보이도록) + 강조 대상 지정.
+  useEffect(() => {
+    if (highlightTransactionId == null) return;
+    setVendorId('');
+    setStatus('');
+    setMonth('');
+    setSearch('');
+    setHighlightId(highlightTransactionId);
+    onHighlightConsumed?.();
+  }, [highlightTransactionId, onHighlightConsumed]);
+
+  // 대상 행으로 스크롤 + 잠깐 강조 후 해제(2초).
+  useEffect(() => {
+    if (highlightId == null) return;
+    const el = document.querySelector(`tr[data-txn="${highlightId}"]`);
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const timer = setTimeout(() => setHighlightId(null), 2000);
+    return () => clearTimeout(timer);
+  }, [rows, highlightId]);
 
   function toggleSort(column: SortColumn) {
     setSort((prev) =>
@@ -198,7 +225,11 @@ export function LedgerView() {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.itemId}>
+            <tr
+              key={r.itemId}
+              data-txn={r.transactionId}
+              className={highlightId === r.transactionId ? 'row-highlight' : ''}
+            >
               <td
                 className="editable-date"
                 title="클릭하여 발행일 수정"

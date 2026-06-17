@@ -52,6 +52,7 @@ export interface VendorItemSummary {
 
 // 한 품목의 개별 거래 줄(언제·어디서). 품목별 요약 드릴다운.
 export interface ItemTransaction {
+  transactionId: number; // 클릭 시 명세서로 이동·하이라이트
   issueDate: string;
   vendorName: string;
   spec: string | null;
@@ -242,7 +243,8 @@ export function createSummaryRepository(db: DB): SummaryRepository {
     itemTransactions(itemName) {
       return db
         .prepare(
-          `SELECT th.issue_date     AS issueDate,
+          `SELECT th.id             AS transactionId,
+                  th.issue_date     AS issueDate,
                   v.name            AS vendorName,
                   ti.spec           AS spec,
                   ti.quantity       AS quantity,

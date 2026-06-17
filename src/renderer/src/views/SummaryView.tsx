@@ -17,7 +17,7 @@ const SUBS: { key: Sub; label: string }[] = [
   { key: 'item', label: '품목별 요약' },
 ];
 
-export function SummaryView() {
+export function SummaryView({ onOpenTransaction }: { onOpenTransaction?: (id: number) => void } = {}) {
   const [sub, setSub] = useState<Sub>('monthly');
   return (
     <div className="view">
@@ -34,7 +34,7 @@ export function SummaryView() {
       </div>
       {sub === 'monthly' && <MonthlyTable />}
       {sub === 'vendor' && <VendorTable />}
-      {sub === 'item' && <ItemTable />}
+      {sub === 'item' && <ItemTable onOpenTransaction={onOpenTransaction} />}
     </div>
   );
 }
@@ -232,7 +232,7 @@ function VendorTable() {
   );
 }
 
-function ItemTable() {
+function ItemTable({ onOpenTransaction }: { onOpenTransaction?: (id: number) => void }) {
   const [rows, setRows] = useState<ItemSummary[]>([]);
   const [openName, setOpenName] = useState<string | null>(null);
   const [txns, setTxns] = useState<ItemTransaction[]>([]);
@@ -301,7 +301,12 @@ function ItemTable() {
                       </thead>
                       <tbody>
                         {txns.map((t, i) => (
-                          <tr key={i}>
+                          <tr
+                            key={i}
+                            className="clickable-row"
+                            title="명세서에서 보기"
+                            onClick={() => onOpenTransaction?.(t.transactionId)}
+                          >
                             <td>{t.issueDate}</td>
                             <td>{t.vendorName}</td>
                             <td>{nullable(t.spec)}</td>

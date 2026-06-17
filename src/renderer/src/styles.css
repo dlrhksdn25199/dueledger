@@ -45,6 +45,8 @@ body {
   flex: 1;
   overflow: auto;
   padding: 16px;
+  /* 스크롤바가 생겼다 사라질 때 콘텐츠 폭이 변해 칸이 흔들리는 것 방지(달력 등) */
+  scrollbar-gutter: stable;
 }
 .view {
   display: flex;
@@ -324,6 +326,15 @@ table.items select {
 td.overdue {
   color: #c0392b;
   font-weight: 700;
+}
+/* 다른 화면에서 넘어와 강조할 명세서 행 — 잠깐 노랑으로 번쩍 */
+@keyframes rowFlash {
+  0% { background: #fde68a; }
+  70% { background: #fef3c7; }
+  100% { background: transparent; }
+}
+table.grid tbody tr.row-highlight td {
+  animation: rowFlash 2s ease-out;
 }
 /* 인라인 날짜 수정 셀(클릭하면 날짜 선택기) */
 td.editable-date {

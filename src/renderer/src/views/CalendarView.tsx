@@ -54,6 +54,17 @@ export function CalendarView() {
     else setMonth(month + 1);
   }
 
+  // Ctrl+←/→ 로 월 이동.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.altKey || e.metaKey) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); prevMonth(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); nextMonth(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [year, month]); // 월 바뀔 때마다 최신 prev/next로 재바인딩
+
   // 달력 셀: 첫 주 앞 공백 + 1..말일
   const firstWeekday = new Date(year, month - 1, 1).getDay(); // 0=일
   const daysInMonth = new Date(year, month, 0).getDate();

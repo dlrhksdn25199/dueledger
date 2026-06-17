@@ -18,6 +18,12 @@ const TABS: { key: Tab; label: string }[] = [
 export function App() {
   const [tab, setTab] = useState<Tab>('home');
   const lastWheel = useRef(0);
+  // 요약 등에서 특정 거래를 클릭 → 명세서 탭으로 이동 후 잠깐 하이라이트.
+  const [highlightTxn, setHighlightTxn] = useState<number | null>(null);
+  function openLedgerTxn(transactionId: number) {
+    setHighlightTxn(transactionId);
+    setTab('ledger');
+  }
 
   const step = (dir: 1 | -1) =>
     setTab((prev) => {
@@ -77,9 +83,14 @@ export function App() {
       </header>
       <main className="content">
         {tab === 'home' && <HomeView />}
-        {tab === 'ledger' && <LedgerView />}
+        {tab === 'ledger' && (
+          <LedgerView
+            highlightTransactionId={highlightTxn}
+            onHighlightConsumed={() => setHighlightTxn(null)}
+          />
+        )}
         {tab === 'calendar' && <CalendarView />}
-        {tab === 'summary' && <SummaryView />}
+        {tab === 'summary' && <SummaryView onOpenTransaction={openLedgerTxn} />}
         {tab === 'manage' && <ManageView />}
       </main>
     </div>

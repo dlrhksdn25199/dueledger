@@ -4,7 +4,7 @@
 body {
   margin: 0;
   font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   color: #1f2933;
   background: #f5f7fa;
 }
@@ -55,9 +55,20 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .toolbar .spacer {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* 검색창은 남는 공간을 채워 넓게(타이핑 편하게), 좁아지면 줄바꿈 */
+.toolbar .search {
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+.toolbar select,
+.toolbar input {
+  height: 36px;
 }
 .form-card {
   background: #fff;
@@ -88,19 +99,19 @@ body {
 }
 input,
 select {
-  padding: 5px 8px;
+  padding: 7px 10px;
   border: 1px solid #cbd2d9;
   border-radius: 5px;
-  font-size: 13px;
+  font-size: 14px;
   background: #fff;
 }
 button {
-  padding: 5px 12px;
+  padding: 7px 14px;
   border: 1px solid #cbd2d9;
   border-radius: 5px;
   background: #fff;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
 }
 button:hover {
   background: #f0f4f8;
@@ -141,6 +152,13 @@ table.grid th {
   font-weight: 600;
   color: #3e4c59;
 }
+/* 줄무늬(번갈아 배경) — 가독성. 연체 강조 행(.overdue-row)은 그대로 둔다. */
+table.grid tbody tr:nth-child(even):not(.overdue-row) {
+  background: #f4f8ff;
+}
+table.grid tbody tr:hover:not(.overdue-row) {
+  background: #e9f1fc;
+}
 th.sortable {
   cursor: pointer;
   user-select: none;
@@ -153,6 +171,19 @@ th.num {
 .row-actions {
   display: flex;
   gap: 6px;
+}
+/* 거래처·카테고리 합본 탭 — 넓으면 2열, 좁으면 1열(반응형) */
+.manage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+.manage-col .view {
+  gap: 12px;
+}
+.manage-col .form-card {
+  max-width: none;
 }
 .empty {
   text-align: center;

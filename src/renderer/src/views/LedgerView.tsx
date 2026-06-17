@@ -147,6 +147,7 @@ export function LedgerView() {
         </select>
         <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
         <input
+          className="search"
           placeholder="검색 (품목·거래처·비고)"
           value={search}
           onChange={(e) => setSearch(e.target.value)}

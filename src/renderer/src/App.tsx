@@ -18,10 +18,14 @@ const TABS: { key: Tab; label: string }[] = [
 export function App() {
   const [tab, setTab] = useState<Tab>('home');
   const lastWheel = useRef(0);
-  // 요약 등에서 특정 거래를 클릭 → 명세서 탭으로 이동 후 잠깐 하이라이트.
-  const [highlightTxn, setHighlightTxn] = useState<number | null>(null);
+  // 요약 등에서 명세서로 이동: 특정 거래 하이라이트 또는 특정 월 필터.
+  const [ledgerNav, setLedgerNav] = useState<{ highlightTxn?: number; month?: string } | null>(null);
   function openLedgerTxn(transactionId: number) {
-    setHighlightTxn(transactionId);
+    setLedgerNav({ highlightTxn: transactionId });
+    setTab('ledger');
+  }
+  function openLedgerMonth(month: string) {
+    setLedgerNav({ month });
     setTab('ledger');
   }
 
@@ -84,13 +88,12 @@ export function App() {
       <main className="content">
         {tab === 'home' && <HomeView />}
         {tab === 'ledger' && (
-          <LedgerView
-            highlightTransactionId={highlightTxn}
-            onHighlightConsumed={() => setHighlightTxn(null)}
-          />
+          <LedgerView nav={ledgerNav} onNavConsumed={() => setLedgerNav(null)} />
         )}
         {tab === 'calendar' && <CalendarView />}
-        {tab === 'summary' && <SummaryView onOpenTransaction={openLedgerTxn} />}
+        {tab === 'summary' && (
+          <SummaryView onOpenTransaction={openLedgerTxn} onOpenMonth={openLedgerMonth} />
+        )}
         {tab === 'manage' && <ManageView />}
       </main>
     </div>

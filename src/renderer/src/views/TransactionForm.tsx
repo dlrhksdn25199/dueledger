@@ -191,7 +191,19 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
 
         <div className="form-row">
           <label>발행일</label>
-          <input type="date" max="9999-12-31" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+          <input
+            type="date"
+            max="9999-12-31"
+            value={issueDate}
+            onChange={(e) => setIssueDate(e.target.value)}
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker();
+              } catch {
+                /* showPicker 미지원 환경 무시 */
+              }
+            }}
+          />
           <label>결제상태</label>
           <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}>
             {PAYMENT_STATUSES.map((s) => (
@@ -207,6 +219,13 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
           <input
             type="date"
             max="9999-12-31"
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker();
+              } catch {
+                /* showPicker 미지원 환경 무시 */
+              }
+            }}
             value={manualDue ? manualDueDate : autoDue ?? ''}
             onChange={(e) => {
               setManualDue(true);

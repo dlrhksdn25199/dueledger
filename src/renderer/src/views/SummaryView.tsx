@@ -17,7 +17,10 @@ const SUBS: { key: Sub; label: string }[] = [
   { key: 'item', label: '품목별 요약' },
 ];
 
-export function SummaryView({ onOpenTransaction }: { onOpenTransaction?: (id: number) => void } = {}) {
+export function SummaryView({
+  onOpenTransaction,
+  onOpenMonth,
+}: { onOpenTransaction?: (id: number) => void; onOpenMonth?: (month: string) => void } = {}) {
   const [sub, setSub] = useState<Sub>('monthly');
   return (
     <div className="view">
@@ -32,14 +35,14 @@ export function SummaryView({ onOpenTransaction }: { onOpenTransaction?: (id: nu
           </button>
         ))}
       </div>
-      {sub === 'monthly' && <MonthlyTable />}
+      {sub === 'monthly' && <MonthlyTable onOpenMonth={onOpenMonth} />}
       {sub === 'vendor' && <VendorTable />}
       {sub === 'item' && <ItemTable onOpenTransaction={onOpenTransaction} />}
     </div>
   );
 }
 
-function MonthlyTable() {
+function MonthlyTable({ onOpenMonth }: { onOpenMonth?: (month: string) => void }) {
   const [rows, setRows] = useState<MonthlySummary[]>([]);
   useEffect(() => {
     void (async () => setRows(await window.api.summary.monthly()))();
@@ -71,7 +74,12 @@ function MonthlyTable() {
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={r.month}>
+          <tr
+            key={r.month}
+            className="clickable-row"
+            title="이 월의 명세서 보기"
+            onClick={() => onOpenMonth?.(r.month)}
+          >
             <td>{r.month}</td>
             <td className="num">{r.txnCount}</td>
             <td className="num">{r.vendorCount}</td>

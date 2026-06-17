@@ -28,12 +28,12 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
 ];
 
 interface Props {
-  // 다른 화면(요약 등)에서 넘어온 하이라이트 대상 명세서. 진입 시 필터 해제 + 그 행 강조.
-  highlightTransactionId?: number | null;
-  onHighlightConsumed?: () => void;
+  // 다른 화면(요약 등)에서 넘어온 이동 요청: 특정 거래 하이라이트 또는 특정 월 필터.
+  nav?: { highlightTxn?: number; month?: string } | null;
+  onNavConsumed?: () => void;
 }
 
-export function LedgerView({ highlightTransactionId, onHighlightConsumed }: Props = {}) {
+export function LedgerView({ nav, onNavConsumed }: Props = {}) {
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -81,16 +81,21 @@ export function LedgerView({ highlightTransactionId, onHighlightConsumed }: Prop
     void reload();
   }, [reload]);
 
-  // 외부에서 하이라이트 대상이 들어오면: 필터 해제(대상이 보이도록) + 강조 대상 지정.
+  // 외부 이동 요청 처리: 월 필터면 그 월만, 거래 하이라이트면 필터 해제 후 그 행 강조.
   useEffect(() => {
-    if (highlightTransactionId == null) return;
+    if (!nav) return;
     setVendorId('');
     setStatus('');
-    setMonth('');
     setSearch('');
-    setHighlightId(highlightTransactionId);
-    onHighlightConsumed?.();
-  }, [highlightTransactionId, onHighlightConsumed]);
+    if (nav.month) {
+      setMonth(nav.month);
+      setHighlightId(null);
+    } else {
+      setMonth('');
+      if (nav.highlightTxn != null) setHighlightId(nav.highlightTxn);
+    }
+    onNavConsumed?.();
+  }, [nav, onNavConsumed]);
 
   // 대상 행으로 스크롤 + 잠깐 강조 후 해제(2초).
   useEffect(() => {

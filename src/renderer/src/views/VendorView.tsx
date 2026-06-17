@@ -88,6 +88,7 @@ export function VendorView() {
   return (
     <div className="view">
       <section className="form-card compact sticky-form">
+        {/* 윗줄: 거래처명 · 결제조건 · 담당자명 · 직급 */}
         <div className="compact-row">
           <strong className="compact-title">{editingId === null ? '거래처 추가' : '거래처 수정'}</strong>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="거래처명" />
@@ -104,17 +105,20 @@ export function VendorView() {
               value={termsValue}
               onChange={(e) => setTermsValue(e.target.value)}
               placeholder={termsType === 'net' ? '일수' : '일(1-31)'}
-              style={{ width: 90 }}
+              style={{ flex: '0 0 90px' }}
             />
           )}
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="전화번호" />
+          <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="담당자명" />
+          <input value={contactTitle} onChange={(e) => setContactTitle(e.target.value)} placeholder="직급" />
+        </div>
+        {/* 아랫줄: 계좌번호 · 전화번호 · (추가/저장) */}
+        <div className="compact-row">
           <input
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value)}
             placeholder="계좌번호"
           />
-          <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="담당자명" />
-          <input value={contactTitle} onChange={(e) => setContactTitle(e.target.value)} placeholder="직급" />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="전화번호" />
           <button className="primary" onClick={() => void save()}>
             {editingId === null ? '추가' : '저장'}
           </button>

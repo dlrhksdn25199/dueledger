@@ -207,9 +207,12 @@ th.num {
 .manage-col .form-card {
   max-width: none;
 }
-/* 컴팩트 추가 폼(한 줄, 작게) + 스크롤 시 위에 고정 */
+/* 컴팩트 추가 폼(여러 줄 가능, 작게) + 스크롤 시 위에 고정 */
 .form-card.compact {
   padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .compact-row {
   display: flex;

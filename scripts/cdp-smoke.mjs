@@ -188,11 +188,11 @@ await evalJS(`(()=>{const ds=document.querySelectorAll('.modal input[type=date]'
 // 발행일도 명시
 await evalJS(`__t.setInput(document.querySelectorAll('.modal input[type=date]')[0],'2026-06-16'); true`);
 // 품목
-await evalJS(`
+await evalJS(`(()=>{
   __t.selByText(document.querySelectorAll('.items tbody tr:first-child select')[0],'신규분류');
   const ins=document.querySelectorAll('.items tbody tr:first-child td input');
-  __t.setInput(ins[0],'특별품목'); __t.setInput(ins[4],'20000'); true
-`);
+  __t.setInput(ins[0],'특별품목'); __t.setInput(ins[4],'20000');
+})(); true`);
 await sleep(200);
 await shot('09-form-manual');
 await evalJS(`__t.clickText('.modal button','저장')`);

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { existsSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import Database from 'better-sqlite3';
 import { openDatabase } from './db';
 import { migrate, backupDatabaseFile } from './migrate';
@@ -17,7 +17,7 @@ afterEach(() => {
   for (const f of tmpFiles.splice(0)) {
     for (const ext of ['', '-wal', '-shm']) rmSync(f + ext, { force: true });
     // 백업 파일도 정리
-    for (const b of readdirSync(tmpdir()).filter((n) => n.startsWith(`${f.split('/').pop()}.backup`))) {
+    for (const b of readdirSync(tmpdir()).filter((n) => n.startsWith(`${basename(f)}.backup`))) {
       rmSync(join(tmpdir(), b), { force: true });
     }
   }
@@ -63,7 +63,7 @@ describe('migrate — whitebox', () => {
     const db = openDatabase(path);
     db.close();
     const backups = readdirSync(tmpdir()).filter((n) =>
-      n.startsWith(`${path.split('/').pop()}.backup`),
+      n.startsWith(`${basename(path)}.backup`),
     );
     expect(backups).toHaveLength(0);
   });
@@ -88,7 +88,7 @@ describe('migrate — whitebox', () => {
     db.close();
 
     // 데이터 있는 DB(version>0)를 올렸으니 백업이 1개 생성됨 (P0 #6b)
-    const base = path.split('/').pop();
+    const base = basename(path);
     const backups = readdirSync(tmpdir()).filter((n) => n.startsWith(`${base}.backup`));
     expect(backups).toHaveLength(1);
   });

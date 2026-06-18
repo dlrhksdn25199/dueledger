@@ -202,6 +202,22 @@ export function TransactionForm({ vendors, categories, editing, onSaved, onCance
               <button onClick={() => setShowVendorAdd(false)}>취소</button>
             </>
           )}
+          {selectedVendor && (
+            <div className="vendor-info">
+              <span>
+                <span className="vi-label">담당자</span>
+                {[selectedVendor.contactName, selectedVendor.contactTitle].filter(Boolean).join(' ') || '—'}
+              </span>
+              <span>
+                <span className="vi-label">전화</span>
+                {selectedVendor.phone || '—'}
+              </span>
+              <span>
+                <span className="vi-label">계좌</span>
+                {selectedVendor.accountNumber || '—'}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="form-row">

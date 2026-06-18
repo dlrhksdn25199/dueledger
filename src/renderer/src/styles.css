@@ -322,6 +322,19 @@ table.items select {
   color: #6b7785;
   font-size: 13px;
 }
+/* 거래처 선택 시 읽기전용 정보(담당자·전화·계좌) — 거래처 변경 시 자동 갱신 */
+.vendor-info {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #3e4c59;
+}
+.vendor-info .vi-label {
+  color: #9aa5b1;
+  margin-right: 4px;
+}
 .items-bar {
   display: flex;
   gap: 8px;

@@ -18,8 +18,12 @@ const TABS: { key: Tab; label: string }[] = [
 export function App() {
   const [tab, setTab] = useState<Tab>('home');
   const lastWheel = useRef(0);
-  // 요약 등에서 명세서로 이동: 특정 거래 하이라이트 또는 특정 월 필터.
-  const [ledgerNav, setLedgerNav] = useState<{ highlightTxn?: number; month?: string } | null>(null);
+  // 요약 등에서 명세서로 이동: 특정 거래 하이라이트, 특정 월 필터, 또는 단축키 액션.
+  const [ledgerNav, setLedgerNav] = useState<{
+    highlightTxn?: number;
+    month?: string;
+    action?: 'search' | 'import' | 'export';
+  } | null>(null);
   function openLedgerTxn(transactionId: number) {
     setLedgerNav({ highlightTxn: transactionId });
     setTab('ledger');
@@ -35,13 +39,28 @@ export function App() {
       return TABS[(i + dir + TABS.length) % TABS.length].key;
     });
 
-  // 키보드: Ctrl+1~5 = 해당 탭, Ctrl+Tab = 다음 탭(순환).
+  // 키보드: Ctrl+1~5 = 해당 탭, Ctrl+Tab = 다음 탭(순환),
+  // Ctrl+F = 명세서 검색, Ctrl+I = 엑셀 가져오기, Ctrl+O = 엑셀 내보내기(전부 명세서 탭).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey || e.altKey || e.metaKey) return;
       if (e.key === 'Tab') {
         e.preventDefault();
         step(1);
+        return;
+      }
+      const action =
+        e.key.toLowerCase() === 'f'
+          ? 'search'
+          : e.key.toLowerCase() === 'i'
+            ? 'import'
+            : e.key.toLowerCase() === 'o'
+              ? 'export'
+              : null;
+      if (action) {
+        e.preventDefault();
+        setLedgerNav({ action });
+        setTab('ledger');
         return;
       }
       const n = Number(e.key);

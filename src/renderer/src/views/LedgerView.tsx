@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   Category,
   LedgerQuery,
@@ -29,8 +29,8 @@ const COLUMNS: { key: SortColumn; label: string }[] = [
 ];
 
 interface Props {
-  // 다른 화면(요약 등)에서 넘어온 이동 요청: 특정 거래 하이라이트 또는 특정 월 필터.
-  nav?: { highlightTxn?: number; month?: string } | null;
+  // 다른 화면(요약 등)·단축키에서 넘어온 이동 요청: 거래 하이라이트, 월 필터, 또는 액션.
+  nav?: { highlightTxn?: number; month?: string; action?: 'search' | 'import' | 'export' } | null;
   onNavConsumed?: () => void;
 }
 
@@ -39,6 +39,7 @@ export function LedgerView({ nav, onNavConsumed }: Props = {}) {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [highlightId, setHighlightId] = useState<number | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const dialog = useDialog();
 
   const [vendorId, setVendorId] = useState('');
@@ -86,6 +87,14 @@ export function LedgerView({ nav, onNavConsumed }: Props = {}) {
   // 외부 이동 요청 처리: 월 필터면 그 월만, 거래 하이라이트면 필터 해제 후 그 행 강조.
   useEffect(() => {
     if (!nav) return;
+    // 단축키 액션(Ctrl+F/I/O): 필터 건드리지 않고 해당 동작만 수행.
+    if (nav.action) {
+      if (nav.action === 'search') searchRef.current?.focus();
+      else if (nav.action === 'import') setImportOpen(true);
+      else if (nav.action === 'export') void exportExcel();
+      onNavConsumed?.();
+      return;
+    }
     setVendorId('');
     setStatus('');
     setSearch('');
@@ -208,14 +217,20 @@ export function LedgerView({ nav, onNavConsumed }: Props = {}) {
         </select>
         <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
         <input
+          ref={searchRef}
           className="search"
           placeholder="검색 (품목·거래처·비고)"
+          title="Ctrl+F"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <span className="spacer" />
-        <button onClick={() => setImportOpen(true)}>엑셀 가져오기</button>
-        <button onClick={() => void exportExcel()}>엑셀 내보내기</button>
+        <button title="Ctrl+I" onClick={() => setImportOpen(true)}>
+          엑셀 가져오기
+        </button>
+        <button title="Ctrl+O" onClick={() => void exportExcel()}>
+          엑셀 내보내기
+        </button>
         <button className="primary" onClick={openNew}>
           + 새 명세서
         </button>

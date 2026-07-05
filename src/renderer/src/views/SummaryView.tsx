@@ -16,11 +16,11 @@ type Sub = 'monthly' | 'vendor' | 'outstanding' | 'item';
 const SUBS: { key: Sub; label: string }[] = [
   { key: 'monthly', label: '월별 요약' },
   { key: 'vendor', label: '거래처별 요약' },
-  { key: 'outstanding', label: '전월 미수금' },
+  { key: 'outstanding', label: '미수금' },
   { key: 'item', label: '품목별 요약' },
 ];
 
-// 기본 조회 월 = 전월(YYYY-MM). '전월 미수금' 탭 초기값.
+// 기본 조회 월 = 전월(YYYY-MM). '미수금' 탭 초기값.
 function prevMonthISO(): string {
   const d = new Date();
   d.setDate(1);
@@ -28,11 +28,23 @@ function prevMonthISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// YYYY-MM을 delta개월만큼 이동(방향키·◀▶ 월 이동용).
+function addMonths(month: string, delta: number): string {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 export function SummaryView({
   onOpenTransaction,
-  onOpenMonth,
-}: { onOpenTransaction?: (id: number) => void; onOpenMonth?: (month: string) => void } = {}) {
+}: { onOpenTransaction?: (id: number) => void } = {}) {
   const [sub, setSub] = useState<Sub>('monthly');
+  const [outstandingMonth, setOutstandingMonth] = useState<string>(prevMonthISO());
+  // 월별 요약 행 클릭 → 그 달 미수금 탭으로 이동.
+  function openOutstanding(month: string) {
+    setOutstandingMonth(month);
+    setSub('outstanding');
+  }
   return (
     <div className="view">
       <div className="subtabs">
@@ -46,15 +58,17 @@ export function SummaryView({
           </button>
         ))}
       </div>
-      {sub === 'monthly' && <MonthlyTable onOpenMonth={onOpenMonth} />}
+      {sub === 'monthly' && <MonthlyTable onOpenOutstanding={openOutstanding} />}
       {sub === 'vendor' && <VendorTable />}
-      {sub === 'outstanding' && <OutstandingTable />}
+      {sub === 'outstanding' && (
+        <OutstandingTable month={outstandingMonth} onMonthChange={setOutstandingMonth} />
+      )}
       {sub === 'item' && <ItemTable onOpenTransaction={onOpenTransaction} />}
     </div>
   );
 }
 
-function MonthlyTable({ onOpenMonth }: { onOpenMonth?: (month: string) => void }) {
+function MonthlyTable({ onOpenOutstanding }: { onOpenOutstanding?: (month: string) => void }) {
   const [rows, setRows] = useState<MonthlySummary[]>([]);
   useEffect(() => {
     void (async () => setRows(await window.api.summary.monthly()))();
@@ -89,8 +103,8 @@ function MonthlyTable({ onOpenMonth }: { onOpenMonth?: (month: string) => void }
           <tr
             key={r.month}
             className="clickable-row"
-            title="이 월의 명세서 보기"
-            onClick={() => onOpenMonth?.(r.month)}
+            title="이 월의 미수금 보기"
+            onClick={() => onOpenOutstanding?.(r.month)}
           >
             <td>{r.month}</td>
             <td className="num">{r.txnCount}</td>
@@ -252,9 +266,9 @@ function VendorTable() {
   );
 }
 
-// 전월 미수금 — 선택 월(기본 전월)의 미지급을 거래처별로. 월 바꾸면 전전달 등도 조회.
-function OutstandingTable() {
-  const [month, setMonth] = useState<string>(prevMonthISO());
+// 미수금 — 선택 월(기본 전월)의 미지급을 거래처별로. 월 바꾸면 전전달 등도 조회.
+// month/onMonthChange는 상위(SummaryView)가 소유 → 월별 요약 클릭으로 특정 월 진입 가능.
+function OutstandingTable({ month, onMonthChange }: { month: string; onMonthChange: (m: string) => void }) {
   const [rows, setRows] = useState<OutstandingVendorSummary[]>([]);
   const [openId, setOpenId] = useState<number | null>(null);
   const [items, setItems] = useState<OutstandingItemSummary[]>([]);
@@ -264,6 +278,24 @@ function OutstandingTable() {
     setItems([]);
     void (async () => setRows(await window.api.summary.outstandingByVendor(month)))();
   }, [month]);
+
+  // ←/→ 방향키로 월 이동. 입력·선택칸에 포커스가 있으면 무시(그 칸 자체 동작 보존).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        onMonthChange(addMonths(month, -1));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        onMonthChange(addMonths(month, 1));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [month, onMonthChange]);
 
   async function toggle(vendorId: number) {
     if (openId === vendorId) {
@@ -284,10 +316,17 @@ function OutstandingTable() {
     <>
       <div className="toolbar">
         <label>조회 월</label>
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-        <button onClick={() => setMonth(prevMonthISO())}>전월</button>
+        <button title="이전 달" onClick={() => onMonthChange(addMonths(month, -1))}>
+          ◀
+        </button>
+        <input type="month" value={month} onChange={(e) => onMonthChange(e.target.value)} />
+        <button title="다음 달" onClick={() => onMonthChange(addMonths(month, 1))}>
+          ▶
+        </button>
+        <button onClick={() => onMonthChange(prevMonthISO())}>전월</button>
         <span className="auto-due">
-          {month} 발행분 중 아직 지급하지 않은 금액(미수금)을 거래처별로 표시합니다. 행을 클릭하면 품목이 펼쳐집니다.
+          {month} 발행분 중 아직 지급하지 않은 금액(미수금)을 거래처별로 표시합니다. ←/→ 방향키로 월 이동, 행을
+          클릭하면 품목이 펼쳐집니다.
         </span>
       </div>
       <table className="grid">

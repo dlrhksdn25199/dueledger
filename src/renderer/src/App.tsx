@@ -28,10 +28,6 @@ export function App() {
     setLedgerNav({ highlightTxn: transactionId });
     setTab('ledger');
   }
-  function openLedgerMonth(month: string) {
-    setLedgerNav({ month });
-    setTab('ledger');
-  }
 
   const step = (dir: 1 | -1) =>
     setTab((prev) => {
@@ -110,9 +106,7 @@ export function App() {
           <LedgerView nav={ledgerNav} onNavConsumed={() => setLedgerNav(null)} />
         )}
         {tab === 'calendar' && <CalendarView onOpenTransaction={openLedgerTxn} />}
-        {tab === 'summary' && (
-          <SummaryView onOpenTransaction={openLedgerTxn} onOpenMonth={openLedgerMonth} />
-        )}
+        {tab === 'summary' && <SummaryView onOpenTransaction={openLedgerTxn} />}
         {tab === 'manage' && <ManageView />}
       </main>
     </div>

@@ -85,3 +85,31 @@ describe('summaryRepository.itemTransactions', () => {
     expect(tx[0]).toMatchObject({ quantity: 10, supply: 100000, total: 110000, paymentStatus: '미지급' });
   });
 });
+
+describe('summaryRepository.outstandingByVendor (전월 미수금)', () => {
+  it('선택 월의 미지급만 거래처별로 — 지급완료 제외', () => {
+    // 2026-04: A 미지급 쌀(11만) + 지급완료 봉투(제외) → A만, 미수금 11만
+    const apr = summary.outstandingByVendor('2026-04');
+    expect(apr).toHaveLength(1);
+    expect(apr[0]).toMatchObject({
+      vendorId: vendorA, vendorName: 'A상사', txnCount: 1,
+      supply: 100000, vat: 10000, unpaid: 110000, phone: '010-1111-2222', accountNumber: '111-22',
+    });
+    // 2026-05: B 미지급 쌀(22만)
+    const may = summary.outstandingByVendor('2026-05');
+    expect(may).toHaveLength(1);
+    expect(may[0]).toMatchObject({ vendorId: vendorB, unpaid: 220000 });
+  });
+  it('미수금 없는 달은 빈 배열', () => {
+    expect(summary.outstandingByVendor('2026-06')).toEqual([]);
+  });
+});
+
+describe('summaryRepository.outstandingVendorItems (드릴다운)', () => {
+  it('선택 월·거래처의 미지급 품목만', () => {
+    // A 2026-04: 미지급 쌀만(봉투는 지급완료라 제외)
+    const items = summary.outstandingVendorItems(vendorA, '2026-04');
+    expect(items.map((i) => i.itemName)).toEqual(['쌀']);
+    expect(items[0]).toMatchObject({ itemName: '쌀', totalQty: 10, supply: 100000, total: 110000, lineCount: 1 });
+  });
+});

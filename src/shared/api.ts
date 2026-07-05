@@ -11,6 +11,8 @@ import type {
   ItemSummary,
   VendorItemSummary,
   ItemTransaction,
+  OutstandingVendorSummary,
+  OutstandingItemSummary,
 } from '../repository/summaryRepository';
 import type { PaymentStatus } from '../domain/types';
 
@@ -22,6 +24,8 @@ export type {
   ItemSummary,
   VendorItemSummary,
   ItemTransaction,
+  OutstandingVendorSummary,
+  OutstandingItemSummary,
 } from '../repository/summaryRepository';
 export type { Category } from '../repository/categoryRepository';
 export type {
@@ -78,5 +82,8 @@ export interface Api {
     byItem(): Promise<ItemSummary[]>;
     vendorItems(vendorId: number): Promise<VendorItemSummary[]>;
     itemTransactions(itemName: string): Promise<ItemTransaction[]>;
+    // 전월 미수금(선택 월의 미지급) — 거래처별 합계 + 거래처별 미지급 품목.
+    outstandingByVendor(month: string): Promise<OutstandingVendorSummary[]>;
+    outstandingVendorItems(vendorId: number, month: string): Promise<OutstandingItemSummary[]>;
   };
 }

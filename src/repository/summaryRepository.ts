@@ -63,12 +63,37 @@ export interface ItemTransaction {
   paymentStatus: PaymentStatus;
 }
 
+// 전월 미수금(선택 월의 미지급) — 거래처별 + 품목 드릴다운.
+// "미수금" = 그 달 발행 명세서 중 payment_status <> 지급완료의 합계(앱의 unpaid 정의와 동일).
+export interface OutstandingVendorSummary {
+  vendorId: number;
+  vendorName: string;
+  phone: string | null;
+  accountNumber: string | null;
+  txnCount: number; // 미수(미지급) 명세서 수
+  supply: number;
+  vat: number;
+  unpaid: number; // 미수금 = 미지급 명세서 합계(total)
+}
+
+export interface OutstandingItemSummary {
+  itemName: string;
+  categoryName: string | null;
+  totalQty: number | null;
+  supply: number;
+  vat: number;
+  total: number;
+  lineCount: number;
+}
+
 export interface SummaryRepository {
   monthly(): MonthlySummary[];
   byVendor(): VendorSummary[];
   byItem(): ItemSummary[];
   vendorItems(vendorId: number): VendorItemSummary[];
   itemTransactions(itemName: string): ItemTransaction[];
+  outstandingByVendor(month: string): OutstandingVendorSummary[];
+  outstandingVendorItems(vendorId: number, month: string): OutstandingItemSummary[];
 }
 
 export function createSummaryRepository(db: DB): SummaryRepository {
@@ -259,6 +284,74 @@ export function createSummaryRepository(db: DB): SummaryRepository {
             ORDER BY th.issue_date, v.name`,
         )
         .all(itemName) as ItemTransaction[];
+    },
+
+    // 전월 미수금 — 선택 월(YYYY-MM, 발행일 기준)의 미지급 명세서를 거래처별로 합산. 미수금 큰 순.
+    outstandingByVendor(month) {
+      return db
+        .prepare(
+          `SELECT v.id                               AS vendorId,
+                  v.name                             AS vendorName,
+                  v.phone                            AS phone,
+                  v.account_number                   AS accountNumber,
+                  COUNT(DISTINCT th.id)              AS txnCount,
+                  COALESCE(SUM(ti.supply_amount), 0) AS supply,
+                  COALESCE(SUM(ti.vat), 0)           AS vat,
+                  COALESCE(SUM(ti.total), 0)         AS unpaid
+             FROM transaction_header th
+             JOIN transaction_item ti ON ti.transaction_id = th.id
+             JOIN vendor v            ON v.id = th.vendor_id
+            WHERE substr(th.issue_date, 1, 7) = ?
+              AND th.payment_status <> ?
+            GROUP BY v.id
+            ORDER BY unpaid DESC`,
+        )
+        .all(month, PAID) as OutstandingVendorSummary[];
+    },
+
+    // 전월 미수금 드릴다운 — 한 거래처의 그 달 미지급 품목명별 합계, 미수금 큰 순.
+    outstandingVendorItems(vendorId, month) {
+      return db
+        .prepare(
+          `SELECT ti.name                          AS itemName,
+                  MAX(c.name)                       AS categoryName,
+                  SUM(CASE WHEN ti.quantity IS NOT NULL THEN ti.quantity ELSE 0 END) AS totalQtyRaw,
+                  SUM(CASE WHEN ti.quantity IS NOT NULL THEN 1 ELSE 0 END)           AS qtyRows,
+                  COALESCE(SUM(ti.supply_amount), 0) AS supply,
+                  COALESCE(SUM(ti.vat), 0)           AS vat,
+                  COALESCE(SUM(ti.total), 0)         AS total,
+                  COUNT(*)                           AS lineCount
+             FROM transaction_item ti
+             JOIN transaction_header th ON th.id = ti.transaction_id
+             LEFT JOIN category c       ON c.id = ti.category_id
+            WHERE th.vendor_id = ?
+              AND substr(th.issue_date, 1, 7) = ?
+              AND th.payment_status <> ?
+            GROUP BY ti.name
+            ORDER BY total DESC`,
+        )
+        .all(vendorId, month, PAID)
+        .map((r) => {
+          const row = r as {
+            itemName: string;
+            categoryName: string | null;
+            totalQtyRaw: number;
+            qtyRows: number;
+            supply: number;
+            vat: number;
+            total: number;
+            lineCount: number;
+          };
+          return {
+            itemName: row.itemName,
+            categoryName: row.categoryName,
+            totalQty: row.qtyRows > 0 ? row.totalQtyRaw : null,
+            supply: row.supply,
+            vat: row.vat,
+            total: row.total,
+            lineCount: row.lineCount,
+          } satisfies OutstandingItemSummary;
+        });
     },
   };
 }

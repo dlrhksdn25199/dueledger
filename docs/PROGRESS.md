@@ -2,7 +2,9 @@
 
 > 진행 상황 단일 기록. 매 작업마다 갱신. (정책·결정은 `CLAUDE.md`, 원칙은 `coding-principles.md`)
 
-## 현재 상태 (2026-06-18) — **v0.1.1 릴리스 완료**
+## 현재 상태 (2026-07-05) — **v0.1.2 릴리스 완료**
+**v0.1.2 추가**: ① 명세서 폼 거래처 정보 표시(담당자·전화·계좌, 거래처 변경 시 갱신) ② 요약에 **미수금** 하위탭(거래처별↔품목별 사이, 선택 월의 미지급을 거래처별+품목 드릴다운, 기본=전월, **←/→·◀▶** 월 이동, **월별 요약 행 클릭→그 달 미수금** 이동). `summaryRepository.outstandingByVendor/outstandingVendorItems`. 배포=zip·설치본(nsis)·포터블 3종(미서명 Defender 오탐 완화). 라이브 검증 완료.
+
 **계층**: domain + repository + **parser(엑셀 임포터)** + **Electron/React UI**(홈 대시보드·달력·상태배지·결제일 수동지정·인라인 거래처/카테고리 생성·최근목록·엑셀 가져오기·**명세서 폼 거래처 정보 표시**·**단축키 Ctrl+F/I/O**) + **패키징(electron-builder, 아이콘 포함)** 완료.
 **테스트**: 110 passing (blackbox + whitebox + 파서/임포트 실파일 검증), `tsc --noEmit` clean, `electron-vite build` 성공. 스키마 v2(결제일 수동 플래그 + updated_at) 마이그레이션 + 업그레이드/백업 테스트 포함.
 **✅ v0.1.1 릴리스 (2026-06-18)**: 버전 0.1.1, 포터블 `DueLedger_v0.1.1.exe`(91MB) 빌드 → **GitHub Release 공개·첨부**(https://github.com/dlrhksdn25199/dueledger/releases/tag/v0.1.1). 태그 `v0.1.1`. 바로 다운로드·실행 가능.

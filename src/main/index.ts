@@ -10,6 +10,8 @@ let db: DB | null = null;
 // CDP UI 테스트 훅 — 환경변수가 있을 때만 렌더러 원격 디버깅 포트를 연다(평소엔 비활성).
 if (process.env.DUELEDGER_REMOTE_DEBUG) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222');
+  // CI(헤드리스 리눅스+Xvfb)에선 크로미움 SUID 샌드박스가 안 떠서 실행이 막힌다 → env 있을 때만 비활성.
+  if (process.env.DUELEDGER_NO_SANDBOX) app.commandLine.appendSwitch('no-sandbox');
 }
 
 // 앱 아이콘(.ico) — 창/작업표시줄용. dev·prod 모두 앱 루트 기준으로 해석(electron-builder files에 포함).

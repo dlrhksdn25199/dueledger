@@ -90,7 +90,21 @@ const v4: Migration = {
   },
 };
 
-export const MIGRATIONS: readonly Migration[] = [v1, v2, v3, v4];
+// v5: 앱 설정 키-값 저장 (가산적, P0 #6). 현재 용도는 편집 가능한 부가세율(taxRate) 하나.
+//   제네릭 설정 프레임워크가 아니라 단순 키-값 한 테이블 — 필요한 키만 repository가 타입으로 감싼다.
+const v5: Migration = {
+  version: 5,
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE app_setting (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
+  },
+};
+
+export const MIGRATIONS: readonly Migration[] = [v1, v2, v3, v4, v5];
 
 // 최신 스키마 버전 = 마이그레이션 중 가장 큰 version
 export const LATEST_VERSION = MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0);

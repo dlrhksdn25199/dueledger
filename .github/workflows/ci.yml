@@ -31,5 +31,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: DueLedger-portable-exe
-          path: release/*.exe
+          # 배포용 3종 전부 — 포터블/설치본(.exe) + 폴더 zip(Defender 오탐 회피 권장본)
+          path: |
+            release/*.exe
+            release/*.zip
           if-no-files-found: error

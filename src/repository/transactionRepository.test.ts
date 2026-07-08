@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { openDatabase, type DB } from './db';
 import { createVendorRepository } from './vendorRepository';
+import { setTaxRate } from './settingsRepository';
 import {
   createTransactionRepository,
   type TransactionRepository,
@@ -300,6 +301,79 @@ describe('transactionRepository.listRecent', () => {
     const recent = repo.listRecent(2);
     expect(recent).toHaveLength(2);
     expect(recent[0].id).toBe(c.id); // 가장 최근
+  });
+});
+
+describe('transactionRepository — 편집 가능 세율(taxRate) 적용', () => {
+  it('저장 시점 세율로 vat 계산 (0.1 → 0.13)', () => {
+    setTaxRate(db, 0.13);
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item({ supplyAmount: 10000, taxType: '과세' })],
+    });
+    const i = repo.getById(t.id)!.items[0];
+    expect(i.vat).toBe(1300); // 10,000 × 0.13
+    expect(i.total).toBe(11300);
+  });
+
+  it('세율 변경은 기존 명세서 vat를 바꾸지 않음 (쓰기 시점 값 유지)', () => {
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item({ supplyAmount: 10000, taxType: '과세' })],
+    });
+    expect(repo.getById(t.id)!.items[0].vat).toBe(1000); // 기본 0.1
+    setTaxRate(db, 0.2);
+    // 다시 읽어도 그대로(재계산 안 함)
+    expect(repo.getById(t.id)!.items[0].vat).toBe(1000);
+  });
+});
+
+describe('transactionRepository.recomputeDueDatesForVendor', () => {
+  it('결제조건 변경 후 재계산: 수동지정 아닌 명세서만 dueDate 갱신', () => {
+    const vendors = createVendorRepository(db);
+    const auto = repo.create({
+      vendorId: vendorWithTerms, // net-30 → 2026-07-16
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+    });
+    const manual = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+      dueDateOverridden: true,
+      dueDate: '2099-01-01',
+    });
+    // 결제조건을 매월 10일로 변경
+    vendors.update(vendorWithTerms, { name: '가나상회', paymentTerms: { type: 'dayOfMonth', value: 10 } });
+    const count = repo.recomputeDueDatesForVendor(vendorWithTerms);
+    expect(count).toBe(1); // 자동 1건만
+    expect(repo.getById(auto.id)!.dueDate).toBe('2026-07-10'); // 6/16은 10일 지남 → 다음 달 10일
+    expect(repo.getById(manual.id)!.dueDate).toBe('2099-01-01'); // 수동은 유지
+  });
+
+  it('결제조건 제거 시 자동 명세서 dueDate → null', () => {
+    const vendors = createVendorRepository(db);
+    const t = repo.create({
+      vendorId: vendorWithTerms,
+      issueDate: '2026-06-16',
+      paymentStatus: '미지급',
+      memo: null,
+      items: [item()],
+    });
+    expect(repo.getById(t.id)!.dueDate).toBe('2026-07-16');
+    vendors.update(vendorWithTerms, { name: '가나상회', paymentTerms: null });
+    repo.recomputeDueDatesForVendor(vendorWithTerms);
+    expect(repo.getById(t.id)!.dueDate).toBeNull();
   });
 });
 

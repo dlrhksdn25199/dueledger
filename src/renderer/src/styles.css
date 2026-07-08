@@ -582,3 +582,17 @@ td.editable-date:hover {
 .import-warnings summary {
   cursor: pointer;
 }
+/* 임포트 후 새 거래처 결제조건 설정 */
+.import-new-terms {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #dbe1e8;
+  border-radius: 8px;
+  background: #f7f9fb;
+}
+.import-new-terms .grid {
+  margin-top: 6px;
+}
+.import-new-terms .import-ok {
+  margin: 0 0 0 6px;
+}

@@ -5,6 +5,7 @@
 //   - 미존재 거래처·카테고리는 자동 생성(이름 trim).
 // 파생값(vat·total)은 여기서도 domain 함수로 계산(P0 #1 불변식).
 import { computeVat, computeTotal } from '../domain/amount';
+import { getTaxRate } from './settingsRepository';
 import type { ParseResult, ParsedItem, ParsedStatement } from '../parser/excelImport';
 import type { DB } from './db';
 
@@ -136,6 +137,7 @@ export function createImportRepository(db: DB): ImportRepository {
     commit(parsed) {
       const plan = buildPlan(parsed);
       const now = new Date().toISOString();
+      const taxRate = getTaxRate(db); // 편집 가능 파라미터 — 적재 시점 세율로 vat 계산
 
       const insertVendor = db.prepare(`INSERT INTO vendor (name, payment_terms_type, payment_terms_value) VALUES (?, NULL, NULL)`);
       const insertCategory = db.prepare(`INSERT INTO category (name) VALUES (?)`);
@@ -175,7 +177,7 @@ export function createImportRepository(db: DB): ImportRepository {
           );
           for (const it of items) {
             const categoryId = it.categoryName ? (plan.categoryIdByName.get(it.categoryName) ?? null) : null;
-            const vat = computeVat(it.supplyAmount, it.taxType);
+            const vat = computeVat(it.supplyAmount, it.taxType, taxRate);
             const total = computeTotal(it.supplyAmount, vat);
             insertItem.run(
               headerId,

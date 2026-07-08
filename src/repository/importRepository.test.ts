@@ -5,6 +5,7 @@ import { openDatabase, type DB } from './db';
 import { createImportRepository, type ImportRepository } from './importRepository';
 import { createTransactionRepository } from './transactionRepository';
 import { createLedgerRepository } from './ledgerRepository';
+import { setTaxRate } from './settingsRepository';
 import { parseLedgerWorkbook, type ParseResult } from '../parser/excelImport';
 
 // 합성 fixture(실명·실금액 아님) — test/fixtures/build-sample.mjs 참고.
@@ -74,6 +75,18 @@ describe('importRepository — commit', () => {
     const myeonse = db.prepare(`SELECT vat FROM transaction_item WHERE tax_type = '면세'`).all() as { vat: number }[];
     expect(myeonse.length).toBeGreaterThan(0);
     expect(myeonse.every((r) => r.vat === 0)).toBe(true);
+  });
+
+  it('설정된 세율로 과세 vat 계산 (0.1 → 0.2)', () => {
+    setTaxRate(db, 0.2);
+    repo.commit(parsed);
+    const bad = db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM transaction_item
+          WHERE tax_type = '과세' AND vat <> CAST(ROUND(supply_amount * 0.2) AS INTEGER)`,
+      )
+      .get() as { c: number };
+    expect(bad.c).toBe(0);
   });
 
   it('재임포트(같은 파일)는 전부 중복으로 건너뜀', () => {

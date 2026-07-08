@@ -46,6 +46,10 @@ const api: Api = {
     outstandingVendorItems: (vendorId, month) =>
       ipcRenderer.invoke('summary:outstandingVendorItems', vendorId, month),
   },
+  settings: {
+    getTaxRate: () => ipcRenderer.invoke('settings:getTaxRate'),
+    setTaxRate: (rate) => ipcRenderer.invoke('settings:setTaxRate', rate),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

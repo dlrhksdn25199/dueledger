@@ -1,24 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { Vendor, PaymentTerms } from '../../../shared/api';
+import type { Vendor } from '../../../shared/api';
 import { useDialog } from '../ui/dialog';
-
-type TermsType = 'none' | 'net' | 'dayOfMonth';
-
-function termsToForm(t: PaymentTerms | null): { type: TermsType; value: string } {
-  if (!t) return { type: 'none', value: '' };
-  return { type: t.type, value: String(t.value) };
-}
-
-function formToTerms(type: TermsType, value: string): PaymentTerms | null {
-  if (type === 'none') return null;
-  return { type, value: Number(value) };
-}
-
-const TERMS_LABEL: Record<TermsType, string> = {
-  none: '없음',
-  net: '발행일+N일 (net)',
-  dayOfMonth: '매월 N일',
-};
+import { type TermsType, TERMS_LABEL, termsToForm, formToTerms } from './paymentTermsForm';
 
 export function VendorView() {
   const [vendors, setVendors] = useState<Vendor[]>([]);

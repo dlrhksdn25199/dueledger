@@ -2,11 +2,12 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import type { DB } from '../repository/db';
 import { createVendorRepository } from '../repository/vendorRepository';
-import { createCategoryRepository } from '../repository/categoryRepository';
+import { createCategoryRepository, CategoryInUseError } from '../repository/categoryRepository';
 import { createTransactionRepository } from '../repository/transactionRepository';
 import { createLedgerRepository } from '../repository/ledgerRepository';
 import { createImportRepository } from '../repository/importRepository';
 import { createSummaryRepository } from '../repository/summaryRepository';
+import { createSettingsRepository } from '../repository/settingsRepository';
 import { parseLedgerWorkbook } from '../parser/excelImport';
 import { writeLedgerWorkbook } from '../parser/excelExport';
 
@@ -17,18 +18,34 @@ export function registerIpcHandlers(db: DB): void {
   const ledger = createLedgerRepository(db);
   const importer = createImportRepository(db);
   const summary = createSummaryRepository(db);
+  const settings = createSettingsRepository(db);
 
   ipcMain.handle('vendor:list', () => vendors.getAll());
   ipcMain.handle('vendor:create', (_e, input) => vendors.create(input));
-  ipcMain.handle('vendor:update', (_e, id, input) => vendors.update(id, input));
+  // 결제조건이 바뀌었을 수 있으니 update 후 그 거래처의 (수동지정 아닌) 명세서 dueDate를 재계산.
+  ipcMain.handle('vendor:update', (_e, id, input) => {
+    const vendor = vendors.update(id, input);
+    transactions.recomputeDueDatesForVendor(id);
+    return vendor;
+  });
   ipcMain.handle('vendor:remove', (_e, id) => vendors.remove(id));
 
   ipcMain.handle('category:list', () => categories.getAll());
   ipcMain.handle('category:create', (_e, name) => categories.create(name));
   ipcMain.handle('category:rename', (_e, id, name) => categories.rename(id, name));
   ipcMain.handle('category:countItemsUsing', (_e, id) => categories.countItemsUsing(id));
-  // remove는 사용 중이면 CategoryInUseError를 throw → IPC가 거부 프라미스로 렌더러에 전파.
-  ipcMain.handle('category:remove', (_e, id) => categories.remove(id));
+  // 사용 중이면 삭제 거부 — 건수를 구조화 결과로 렌더러에 전달(throw 대신, 커스텀 에러 속성이 IPC로 유실되지 않게).
+  ipcMain.handle('category:remove', (_e, id) => {
+    try {
+      categories.remove(id);
+      return { ok: true as const };
+    } catch (e) {
+      if (e instanceof CategoryInUseError) {
+        return { ok: false as const, reason: 'in-use' as const, itemCount: e.itemCount };
+      }
+      throw e;
+    }
+  });
 
   ipcMain.handle('transaction:get', (_e, id) => transactions.getById(id));
   ipcMain.handle('transaction:create', (_e, input) => transactions.create(input));
@@ -78,4 +95,8 @@ export function registerIpcHandlers(db: DB): void {
     writeLedgerWorkbook(filePath, rows);
     return { path: filePath, count: rows.length };
   });
+
+  // 앱 설정 — 편집 가능한 부가세율(taxRate). 이후 명세서 저장/임포트의 vat 계산에 쓰인다.
+  ipcMain.handle('settings:getTaxRate', () => settings.getTaxRate());
+  ipcMain.handle('settings:setTaxRate', (_e, rate: number) => settings.setTaxRate(rate));
 }

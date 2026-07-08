@@ -42,11 +42,13 @@ export function CategoryView() {
     }
     const ok = await dialog.confirm({ message: `'${c.name}' 카테고리를 삭제할까요?`, danger: true, confirmText: '삭제' });
     if (!ok) return;
-    try {
-      await window.api.category.remove(c.id);
-    } catch (e) {
-      // 경합 등으로 그 사이 사용 중이 됐을 때 백엔드 가드가 다시 막음
-      await dialog.alert({ title: '삭제 실패', message: (e as Error).message });
+    // 경합 등으로 그 사이 사용 중이 됐으면 백엔드 가드가 다시 막고, 건수를 구조화 결과로 돌려준다.
+    const res = await window.api.category.remove(c.id);
+    if (!res.ok) {
+      await dialog.alert({
+        title: '삭제할 수 없음',
+        message: `'${c.name}' 카테고리는 품목 ${res.itemCount}건에서 사용 중입니다.\n해당 품목을 다른 카테고리로 재지정한 뒤 삭제하세요.`,
+      });
     }
     await reload();
   }

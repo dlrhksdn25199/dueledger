@@ -4,6 +4,7 @@
 import type { PaymentStatus, PaymentTerms, TaxType } from '../domain/types';
 import { computeVat, computeTotal } from '../domain/amount';
 import { computeDueDate } from '../domain/paymentDate';
+import { getTaxRate } from './settingsRepository';
 import type { DB } from './db';
 
 export interface TransactionItemInput {
@@ -105,6 +106,8 @@ export interface TransactionRepository {
   setPaymentStatus(id: number, status: PaymentStatus): void; // 결제상태만 빠르게 변경(목록에서 토글)
   setIssueDate(id: number, issueDate: string): void; // 발행일만 변경(미수동지정이면 결제일 재계산)
   setDueDate(id: number, dueDate: string): void; // 결제일 직접 지정(수동 플래그 ON)
+  // 거래처 결제조건이 바뀌었을 때, 그 거래처의 수동지정 아닌 명세서 dueDate를 일괄 재계산. 갱신 건수 반환.
+  recomputeDueDatesForVendor(vendorId: number): number;
   remove(id: number): void;
   listSummaries(): TransactionSummary[];
   listRecent(limit: number): TransactionSummary[];
@@ -143,8 +146,9 @@ export function createTransactionRepository(db: DB): TransactionRepository {
   );
 
   function insertItems(transactionId: number, items: TransactionItemInput[]): void {
+    const taxRate = getTaxRate(db); // 편집 가능 파라미터 — 쓰기 시점 세율을 vat에 고정 저장
     for (const it of items) {
-      const vat = computeVat(it.supplyAmount, it.taxType); // 면세=0, 과세=round(공급가액×세율)
+      const vat = computeVat(it.supplyAmount, it.taxType, taxRate); // 면세=0, 과세=round(공급가액×세율)
       const total = computeTotal(it.supplyAmount, vat);
       insertItem.run(
         transactionId,
@@ -261,6 +265,23 @@ export function createTransactionRepository(db: DB): TransactionRepository {
         .prepare(`UPDATE transaction_header SET due_date = ?, due_date_overridden = 1, updated_at = ? WHERE id = ?`)
         .run(dueDate, now, id);
       if (info.changes === 0) throw new Error(`Transaction not found: ${id}`);
+    },
+
+    // 거래처 결제조건 변경 반영: 그 거래처의 수동지정(overridden) 아닌 명세서만 dueDate 재계산.
+    // 조건이 없어졌으면 null로. updated_at은 건드리지 않음(파생값 갱신이라 "최근 수정"에 안 올림).
+    recomputeDueDatesForVendor(vendorId) {
+      const rows = db
+        .prepare(
+          `SELECT id, issue_date AS issueDate FROM transaction_header
+            WHERE vendor_id = ? AND due_date_overridden = 0`,
+        )
+        .all(vendorId) as { id: number; issueDate: string }[];
+      const setDue = db.prepare(`UPDATE transaction_header SET due_date = ? WHERE id = ?`);
+      const tx = db.transaction(() => {
+        for (const r of rows) setDue.run(computeDue(vendorId, r.issueDate), r.id);
+      });
+      tx();
+      return rows.length;
     },
 
     remove(id) {

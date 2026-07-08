@@ -4,8 +4,9 @@ import { LedgerView } from './views/LedgerView';
 import { CalendarView } from './views/CalendarView';
 import { SummaryView } from './views/SummaryView';
 import { ManageView } from './views/ManageView';
+import { SettingsView } from './views/SettingsView';
 
-type Tab = 'home' | 'ledger' | 'calendar' | 'summary' | 'manage';
+type Tab = 'home' | 'ledger' | 'calendar' | 'summary' | 'manage' | 'settings';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'home', label: '홈' },
@@ -13,6 +14,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'calendar', label: '달력' },
   { key: 'summary', label: '요약' },
   { key: 'manage', label: '거래처·카테고리' },
+  { key: 'settings', label: '설정' },
 ];
 
 export function App() {
@@ -108,6 +110,7 @@ export function App() {
         {tab === 'calendar' && <CalendarView onOpenTransaction={openLedgerTxn} />}
         {tab === 'summary' && <SummaryView onOpenTransaction={openLedgerTxn} />}
         {tab === 'manage' && <ManageView />}
+        {tab === 'settings' && <SettingsView />}
       </main>
     </div>
   );

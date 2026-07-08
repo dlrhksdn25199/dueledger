@@ -37,6 +37,11 @@ export type {
 export type { LedgerRow, LedgerQuery, SortColumn } from '../repository/ledgerRepository';
 export type { TaxType, PaymentStatus, PaymentTerms } from '../domain/types';
 
+// 카테고리 삭제 결과 — 사용 중이면 건수를 구조화해 전달(throw로 커스텀 속성이 IPC에서 유실되는 것 방지).
+export type CategoryRemoveResult =
+  | { ok: true }
+  | { ok: false; reason: 'in-use'; itemCount: number };
+
 export interface Api {
   vendor: {
     list(): Promise<Vendor[]>;
@@ -49,7 +54,8 @@ export interface Api {
     create(name: string): Promise<Category>;
     rename(id: number, name: string): Promise<Category>;
     countItemsUsing(id: number): Promise<number>;
-    remove(id: number): Promise<void>;
+    // 사용 중이면 { ok:false, itemCount } 반환(throw 아님). 재지정 후 삭제 안내용.
+    remove(id: number): Promise<CategoryRemoveResult>;
   };
   transaction: {
     get(id: number): Promise<Transaction | null>;
@@ -84,5 +90,10 @@ export interface Api {
     // 전월 미수금(선택 월의 미지급) — 거래처별 합계 + 거래처별 미지급 품목.
     outstandingByVendor(month: string): Promise<OutstandingVendorSummary[]>;
     outstandingVendorItems(vendorId: number, month: string): Promise<OutstandingItemSummary[]>;
+  };
+  // 앱 설정 — 편집 가능한 부가세율(0~1, 예: 0.1 = 10%). 이후 저장/임포트의 vat 계산에 적용.
+  settings: {
+    getTaxRate(): Promise<number>;
+    setTaxRate(rate: number): Promise<void>;
   };
 }

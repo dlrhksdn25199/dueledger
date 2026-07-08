@@ -1,6 +1,10 @@
 // CDP UI 스모크 — 실행 중인 앱을 띄워 핵심 흐름(시드·거래처·명세서·금액/결제일 계산·정렬·삭제가드)을 클릭/입력으로 검증.
-// 사전: 깨끗한 프로필로 앱 실행 →  npm run rebuild:electron && DUELEDGER_REMOTE_DEBUG=1 npm run dev
+// 사전(⚠️ 빈 DB 필수 — 홈 "예정 1건"/합계 검증이 잔존 데이터에 걸림):
+//   rm -f "$HOME/Library/Application Support/dueledger/dueledger.db"*   (윈도우: %APPDATA%\dueledger)
+//   npm run rebuild:electron  (캐시로 no-op면 npx @electron/rebuild -f -w better-sqlite3)
+//   DUELEDGER_REMOTE_DEBUG=1 npm run dev
 // 그다음:  node scripts/cdp-smoke.mjs   (스크린샷: /tmp/dl-shots, 의존성 없음 — Node 내장 fetch/WebSocket)
+// UI 반영: 거래처·카테고리는 한 탭(ManageView, .manage-col 좌=거래처/우=카테고리) · 안내는 인앱 다이얼로그(.modal.dialog).
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 const SHOT = '/tmp/dl-shots';
@@ -59,23 +63,24 @@ await evalJS(`
 await sleep(400);
 await shot('01-initial');
 
-// 1) 카테고리 시드
-await evalJS(`__t.clickText('.tab','카테고리')`);
+// 거래처·카테고리는 한 탭으로 병합됨(ManageView) — 왼쪽 .manage-col=거래처, 오른쪽=카테고리.
+//   두 표 모두 table.grid, 두 폼 모두 form-card라 nth-child로 좌/우를 구분해 지정한다.
+
+// 1) 카테고리 시드 (통합 탭 오른쪽 카테고리 표)
+await evalJS(`__t.clickText('.tab','거래처·카테고리')`);
 await sleep(300);
-const cats = (await evalJS(`__t.rows('table.grid')`)).map((r) => r[0]);
+const cats = (await evalJS(`__t.rows('.manage-col:nth-child(2) table.grid')`)).map((r) => r[0]);
 check('카테고리 시드 5종', ['식자재', '포장재', '소모품', '위생용품', '기타'].every((c) => cats.includes(c)), cats.join(','));
 await shot('02-categories');
 
-// 2) 거래처 net-30 생성
-await evalJS(`__t.clickText('.tab','거래처')`);
-await sleep(300);
-await evalJS(`__t.setInput(document.querySelector('input[placeholder="거래처명"]'),'가나상회'); __t.setSelect(document.querySelector('.form-card select'),'net'); true`);
+// 2) 거래처 net-30 생성 (같은 통합 탭 왼쪽 거래처 칸)
+await evalJS(`__t.setInput(document.querySelector('.manage-col:nth-child(1) input[placeholder="거래처명"]'),'가나상회'); __t.setSelect(document.querySelector('.manage-col:nth-child(1) .form-card select'),'net'); true`);
 await sleep(250);
-await evalJS(`__t.setInput(document.querySelector('.form-card input[type=number]'),'30'); true`);
+await evalJS(`__t.setInput(document.querySelector('.manage-col:nth-child(1) .form-card input[type=number]'),'30'); true`);
 await sleep(150);
-await evalJS(`__t.clickText('.form-card button','추가')`);
+await evalJS(`__t.clickText('.manage-col:nth-child(1) .form-card button','추가')`);
 await sleep(500);
-const vendors = (await evalJS(`__t.rows('table.grid')`)).map((r) => r[0]);
+const vendors = (await evalJS(`__t.rows('.manage-col:nth-child(1) table.grid')`)).map((r) => r[0]);
 check('거래처 생성(가나상회)', vendors.includes('가나상회'), vendors.join(','));
 await shot('03-vendor');
 
@@ -118,16 +123,19 @@ await evalJS(`__t.clickText('th.sortable','공급가액')`);
 await sleep(300);
 check('정렬 클릭 후 행 유지', (await evalJS(`__t.rows('table.grid.ledger')`)).length >= 1);
 
-// 5) 카테고리 사용 중 삭제 차단 (P0 #4)
-await evalJS(`__t.clickText('.tab','카테고리'); window.__lastAlert=null; true`);
+// 5) 카테고리 사용 중 삭제 차단 (P0 #4) — 통합 탭 오른쪽 카테고리 표
+await evalJS(`__t.clickText('.tab','거래처·카테고리'); window.__lastAlert=null; true`);
 await sleep(300);
 await evalJS(`
-  const tr=Array.from(document.querySelectorAll('table.grid tbody tr')).find(t=>t.querySelector('td')?.textContent.trim()==='식자재');
+  const tr=Array.from(document.querySelectorAll('.manage-col:nth-child(2) table.grid tbody tr')).find(t=>t.querySelector('td')?.textContent.trim()==='식자재');
   Array.from(tr.querySelectorAll('button')).find(b=>b.textContent.trim()==='삭제').click(); true
 `);
 await sleep(500);
-const alertMsg = await evalJS(`window.__lastAlert`);
-check('사용 중 카테고리 삭제 차단 알림', !!alertMsg && alertMsg.includes('사용 중'), alertMsg || '(no alert)');
+// 안내는 이제 OS alert가 아니라 인앱 다이얼로그(.modal.dialog)로 뜬다 — DOM에서 메시지를 읽는다.
+const alertMsg = await evalJS(`document.querySelector('.modal.dialog .dialog-msg')?.textContent.trim() || ''`);
+check('사용 중 카테고리 삭제 차단 알림', !!alertMsg && alertMsg.includes('사용 중'), alertMsg || '(no dialog)');
+await evalJS(`__t.clickText('.dialog-actions button','확인')`); // 다이얼로그 닫기
+await sleep(200);
 await shot('06-category-guard');
 
 // 6) 홈 대시보드 (A) — 카드 + 상태 배지
@@ -151,13 +159,20 @@ await sleep(400);
 const ledgerBadge = await evalJS(`document.querySelector('table.grid.ledger .badge.unpaid')?.textContent.trim() || ''`);
 check('명세서 미지급 배지', ledgerBadge === '미지급', ledgerBadge);
 
-// 8) 캘린더 (E) — 7월로 이동, 결제일(7/16) 칸에 금액 표시
+// 8) 캘린더 (E) — 결제일(2026-07-16)이 있는 2026년 7월로 이동(오늘 날짜와 무관하게 헤더를 보고 이동).
 await evalJS(`__t.clickText('.tab','달력')`);
 await sleep(400);
-await evalJS(`__t.clickText('.cal-header button','다음')`); // 6월 → 7월
-await sleep(300);
+for (let i = 0; i < 24; i++) {
+  const label = await evalJS(`document.querySelector('.cal-header h2')?.textContent.trim() || ''`);
+  const m = label.match(/(\d+)\s*년\s*(\d+)\s*월/);
+  if (m && Number(m[1]) === 2026 && Number(m[2]) === 7) break;
+  const dir = m && Number(m[1]) * 12 + Number(m[2]) < 2026 * 12 + 7 ? '다음' : '이전';
+  await evalJS(`__t.clickText('.cal-header button','${dir}')`);
+  await sleep(150);
+}
+const calMonth = await evalJS(`document.querySelector('.cal-header h2')?.textContent.trim() || ''`);
 const calAmounts = await evalJS(`Array.from(document.querySelectorAll('.cal-amount')).map(e=>e.textContent.trim())`);
-check('캘린더 7월에 결제(13,580) 표시', calAmounts.includes('13,580'), calAmounts.join(','));
+check('캘린더 7월에 결제(13,580) 표시', calAmounts.includes('13,580'), `${calMonth} -> ${calAmounts.join(',')}`);
 await shot('08-calendar');
 
 // 9) 인라인 거래처/카테고리 생성 + 수동 결제일
@@ -181,12 +196,12 @@ await evalJS(`__t.clickText('.modal button','추가')`);
 await sleep(400);
 const catOpts = await evalJS(`Array.from(document.querySelectorAll('.items tbody tr:first-child select option')).map(o=>o.textContent.trim())`);
 check('인라인 카테고리 생성(드롭다운 반영)', catOpts.includes('신규분류'), catOpts.join(','));
-// 수동 결제일 지정
-await evalJS(`document.querySelector('.modal input[type=checkbox]').click(); true`);
-await sleep(300);
-await evalJS(`(()=>{const ds=document.querySelectorAll('.modal input[type=date]'); __t.setInput(ds[ds.length-1],'2026-08-01');})(); true`);
-// 발행일도 명시
+// 수동 결제일 지정 — 체크박스는 없어졌고, 결제일 date 입력을 바꾸면 곧 "직접 지정"(manual)이 된다.
+// 발행일(첫 date) 먼저, 그다음 결제일(마지막 date)을 직접 입력해 manual 상태로 굳힌다.
 await evalJS(`__t.setInput(document.querySelectorAll('.modal input[type=date]')[0],'2026-06-16'); true`);
+await sleep(150);
+await evalJS(`(()=>{const ds=document.querySelectorAll('.modal input[type=date]'); __t.setInput(ds[ds.length-1],'2026-08-01');})(); true`);
+await sleep(200);
 // 품목
 await evalJS(`(()=>{
   __t.selByText(document.querySelectorAll('.items tbody tr:first-child select')[0],'신규분류');

@@ -31,11 +31,10 @@ export type { Category } from '../repository/categoryRepository';
 export type {
   Transaction,
   TransactionInput,
-  TransactionItem,
   TransactionItemInput,
   TransactionSummary,
 } from '../repository/transactionRepository';
-export type { LedgerRow, LedgerQuery, SortColumn, LedgerFilter } from '../repository/ledgerRepository';
+export type { LedgerRow, LedgerQuery, SortColumn } from '../repository/ledgerRepository';
 export type { TaxType, PaymentStatus, PaymentTerms } from '../domain/types';
 
 export interface Api {

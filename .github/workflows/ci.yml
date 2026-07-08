@@ -52,6 +52,8 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      # npm ci가 electron 바이너리 다운로드를 건너뛸 때가 있음 → 명시적으로 받아둔다(없으면 electron-vite가 "Electron uninstall"로 실패).
+      - run: node node_modules/electron/install.js
       # 앱 실행용 = better-sqlite3를 Electron ABI로 (npm ci는 Node ABI라 그대로면 앱에서 크래시)
       - run: npx @electron/rebuild -f -w better-sqlite3
       # Electron/Chromium 런타임 라이브러리 + 가상 디스플레이(Xvfb)
